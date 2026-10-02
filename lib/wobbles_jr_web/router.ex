@@ -26,6 +26,12 @@ defmodule WobblesJrWeb.Router do
     bb_dashboard("/dashboard", robot: WobblesJr.Robot)
   end
 
+  # No pipeline: MCP clients speak JSON and don't carry a CSRF token.
+  scope "/" do
+    import BB.MCP.Router
+    bb_mcp("/mcp")
+  end
+
   scope "/api", WobblesJrWeb do
     pipe_through(:api)
   end

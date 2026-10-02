@@ -69,6 +69,7 @@ defmodule WobblesJr.MixProject do
        ]},
       {:phx_install, "~> 0.1", only: [:dev, :test], runtime: false},
       {:bb_nsk, "~> 0.1"},
+      {:bb_mcp, "~> 0.1"},
       {:igniter, "~> 0.6", only: [:dev, :test]},
       # Dependencies for all targets
       {:nerves, "~> 1.13", runtime: false},

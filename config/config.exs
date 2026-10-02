@@ -42,6 +42,7 @@ config :wobbles_jr,
 
 config :emerge, compiled_backends: [], compiled_vulkan_backends: []
 config :bb_nsk, name: "wobbles_jr"
+config :bb_mcp, robots: [WobblesJr.Robot]
 
 # Enable the Nerves integration with Mix
 Application.start(:nerves_bootstrap)

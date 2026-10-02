@@ -17,6 +17,7 @@ defmodule WobblesJr.Application do
         BB.NSK.Display.Supervisor,
         {Phoenix.PubSub, [name: WobblesJr.PubSub]},
         {WobblesJr.Robot, robot_opts()},
+        {BB.MCP.Server, transport: {:streamable_http, start: true}},
         WobblesJrWeb.Endpoint
       ] ++ target_children()
 
