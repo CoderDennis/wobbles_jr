@@ -472,6 +472,8 @@ defmodule Goatbot.Robot do
        drive_slew: param([:drive, :ramp]),
        drive_release: param([:drive, :release])}
     )
+
+    controller(:leds, {BB.NSK.Leds.Controller, brightness: 40})
   end
 
   states do
