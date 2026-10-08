@@ -329,6 +329,23 @@ defmodule Goatbot.Robot do
       # More than a bias corrector: the commanded velocity is the only estimate
       # of speed this hardware can produce, so this is the only velocity feedback
       # in the system. Without it the robot rocks as it accelerates away.
+      # Only `Goatbot.Balancer` reads these two. Zero to start: tune PD first.
+      param(:integral_gain,
+        type: :float,
+        default: 0.0,
+        min: 0.0,
+        max: 500.0,
+        doc: "Wheel velocity per radian-second of accumulated lean error, in 1/s²"
+      )
+
+      param(:integral_limit,
+        type: :float,
+        default: 0.1,
+        min: 0.0,
+        max: 1.0,
+        doc: "Clamp on the accumulated lean error, in radian-seconds"
+      )
+
       param(:trim_gain,
         type: :float,
         default: 0.01,
@@ -454,24 +471,44 @@ defmodule Goatbot.Robot do
 
   controllers do
     controller(
-      :balancer,
-      {BB.NSK.Balance.Controller,
+      :pid_balancer,
+      {Goatbot.Balancer,
        setpoint: param([:balance, :setpoint]),
-       proportional_gain: param([:balance, :proportional_gain]),
-       derivative_gain: param([:balance, :derivative_gain]),
-       trim_gain: param([:balance, :trim_gain]),
-       trim_limit: param([:balance, :trim_limit]),
-       fall_angle: param([:balance, :fall_angle]),
-       catch_angle: param([:balance, :catch_angle]),
-       catch_rate: param([:balance, :catch_rate]),
-       yaw_gain: param([:yaw, :gain]),
-       yaw_damping: param([:yaw, :damping]),
-       yaw_limit: param([:yaw, :limit]),
-       yaw_tau: param([:yaw, :tau]),
-       drive_limit: param([:drive, :authority]),
-       drive_slew: param([:drive, :ramp]),
-       drive_release: param([:drive, :release])}
+       kp: param([:balance, :proportional_gain]),
+       ki: param([:balance, :integral_gain]),
+       kd: param([:balance, :derivative_gain]),
+       integral_limit: param([:balance, :integral_limit]),
+       fall_angle: param([:balance, :fall_angle])},
+      # No hardware of its own (it only publishes to the wheels, which are
+      # swapped for simulated ones), so it can run under SIMULATE too.
+      simulation: :start
     )
+
+    # The stock balancer, swapped out for `Goatbot.Balancer` above. Only one of
+    # the two may run — both would be driving the same wheels.
+    #
+    # Without it, `arm` lands in `:idle` rather than `:balancing`, so hand over
+    # with `Goatbot.Robot.stand()`.
+    #
+    # controller(
+    #   :balancer,
+    #   {BB.NSK.Balance.Controller,
+    #    setpoint: param([:balance, :setpoint]),
+    #    proportional_gain: param([:balance, :proportional_gain]),
+    #    derivative_gain: param([:balance, :derivative_gain]),
+    #    trim_gain: param([:balance, :trim_gain]),
+    #    trim_limit: param([:balance, :trim_limit]),
+    #    fall_angle: param([:balance, :fall_angle]),
+    #    catch_angle: param([:balance, :catch_angle]),
+    #    catch_rate: param([:balance, :catch_rate]),
+    #    yaw_gain: param([:yaw, :gain]),
+    #    yaw_damping: param([:yaw, :damping]),
+    #    yaw_limit: param([:yaw, :limit]),
+    #    yaw_tau: param([:yaw, :tau]),
+    #    drive_limit: param([:drive, :authority]),
+    #    drive_slew: param([:drive, :ramp]),
+    #    drive_release: param([:drive, :release])}
+    # )
 
     controller(:leds, {BB.NSK.Leds.Controller, brightness: 40})
   end

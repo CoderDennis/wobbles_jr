@@ -12,7 +12,7 @@ defmodule Goatbot.Application do
         # Children for all targets
         # Starts a worker by calling: Goatbot.Worker.start_link(arg)
         # {Goatbot.Worker, arg},
-        {Goatbot.Robot, robot_opts()}
+        # {Goatbot.Robot, robot_opts()}
       ] ++ target_children()
 
     # See https://elixir.hexdocs.pm/Supervisor.html
