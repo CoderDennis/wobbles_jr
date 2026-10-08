@@ -85,6 +85,70 @@ defmodule Goatbot.Robot do
                   iyz: ~u(0 gram_square_centimeter)
                 )
               end
+
+              joint :left_wheel_joint do
+                type(:continuous)
+                axis(roll: ~u(-90 degree))
+                origin(y: ~u(55 millimeter))
+
+                limit(effort: ~u(0.2 newton_meter), velocity: ~u(20 radian_per_second))
+
+                actuator(
+                  :left_wheel,
+                  {BB.NSK.Wheel,
+                   forward_pwm: 3,
+                   reverse_pwm: 2,
+                   enable_pin: "PE6",
+                   deadband: param([:motor, :deadband])}
+                )
+
+                link :left_wheel_link do
+                  inertial do
+                    mass(~u(15 gram))
+
+                    inertia(
+                      ixx: ~u(17.33 gram_square_centimeter),
+                      iyy: ~u(34.67 gram_square_centimeter),
+                      izz: ~u(17.33 gram_square_centimeter),
+                      ixy: ~u(0 gram_square_centimeter),
+                      ixz: ~u(0 gram_square_centimeter),
+                      iyz: ~u(0 gram_square_centimeter)
+                    )
+                  end
+                end
+              end
+
+              joint :right_wheel_joint do
+                type(:continuous)
+                axis(roll: ~u(-90 degree))
+                origin(y: ~u(-55 millimeter))
+
+                limit(effort: ~u(0.2 newton_meter), velocity: ~u(20 radian_per_second))
+
+                actuator(
+                  :right_wheel,
+                  {BB.NSK.Wheel,
+                   forward_pwm: 5,
+                   reverse_pwm: 4,
+                   enable_pin: "PE11",
+                   deadband: param([:motor, :deadband])}
+                )
+
+                link :right_wheel_link do
+                  inertial do
+                    mass(~u(15 gram))
+
+                    inertia(
+                      ixx: ~u(17.33 gram_square_centimeter),
+                      iyy: ~u(34.67 gram_square_centimeter),
+                      izz: ~u(17.33 gram_square_centimeter),
+                      ixy: ~u(0 gram_square_centimeter),
+                      ixz: ~u(0 gram_square_centimeter),
+                      iyz: ~u(0 gram_square_centimeter)
+                    )
+                  end
+                end
+              end
             end
           end
         end
@@ -104,5 +168,19 @@ defmodule Goatbot.Robot do
         do: "tmp/goatbot_params",
         else: "/root/goatbot_params"
     )
+  end
+
+  parameters do
+    group :motor do
+      # Measured unloaded, so the figure under the robot's own weight will be
+      # higher — which is why it is tunable.
+      param(:deadband,
+        type: :float,
+        default: 0.01,
+        min: 0.0,
+        max: 0.9,
+        doc: "Duty below which the motor doesn't turn, as a fraction of full scale"
+      )
+    end
   end
 end
