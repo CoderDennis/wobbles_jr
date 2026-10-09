@@ -14,7 +14,8 @@ defmodule Goatbot.Application do
           # Children for all targets
           # Starts a worker by calling: Goatbot.Worker.start_link(arg)
           # {Goatbot.Worker, arg},
-          {Goatbot.Robot, robot_opts()}
+          {Goatbot.Robot, robot_opts()},
+          Goatbot.Remote
         ]
 
     # See https://elixir.hexdocs.pm/Supervisor.html
@@ -46,7 +47,10 @@ defmodule Goatbot.Application do
         %{
           id: Goatbot.STM32,
           start: {__MODULE__, :start_stm32, [[port: "ttyS2"]]}
-        }
+        },
+
+        # The Erlang node the badge drives the robot through, named for the wifi address.
+        Goatbot.Distribution
       ]
     end
   end
