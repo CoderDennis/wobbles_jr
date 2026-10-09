@@ -6,6 +6,10 @@
 import Config
 config :bb_nsk, name: "goatbot"
 
+# Breeze (the `Goatbot.Dashboard` TUI) sizes its render cache from :os_mon when
+# it's running. It isn't here, so give it a fixed budget that suits the board.
+config :back_breeze, render_cache_max_memory_bytes: 16 * 1_024 * 1_024
+
 # Enable the Nerves integration with Mix
 Application.start(:nerves_bootstrap)
 

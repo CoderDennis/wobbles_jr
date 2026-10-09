@@ -228,6 +228,14 @@ defmodule Goatbot.Robot do
     end
   end
 
+  # Robot-level sensors, not attached to any link.
+  sensors do
+    # Battery voltage and current from the STM32 coprocessor, published as
+    # `BB.Message.Sensor.BatteryState` on [:sensor, :power], and its button
+    # events on [:buttons]. Idle on the host, where there's no STM32.
+    sensor(:power, Goatbot.Sensor.Power)
+  end
+
   # `/root` is the Nerves application data partition and does not exist on a
   # host. The DSL is compiled, so this is decided when the firmware is built.
   #
@@ -275,16 +283,22 @@ defmodule Goatbot.Robot do
       # The filter sits *inside* the control loop, so its lag is part of the
       # plant the balance gains are tuned against — changing one invalidates the
       # tuning of the other.
+      #
+      # 0.2 rather than 0.4, from replaying recorded IMU data through both
+      # filters: half as quick to mistake a steady acceleration for lean (0.9°
+      # of a 5° fake tilt after 1 s, against 1.65°), and the lowest error while
+      # being pushed back and forth. Madgwick was worse on both.
       param(:kp,
         type: :float,
-        default: 0.4,
+        default: 0.2,
         min: 0.0,
         max: 5.0,
         doc:
           "How hard the accelerometer may pull the estimate. Small: it can't tell lean from acceleration"
       )
 
-      # Defaults to zero in the library, so it has to be set.
+      # Defaults to zero in the library, so it has to be set. Matters more at a
+      # low kp, which leans on the gyro for longer.
       param(:ki,
         type: :float,
         default: 0.005,
@@ -297,55 +311,65 @@ defmodule Goatbot.Robot do
     group :balance do
       # Not zero: the centre of mass sits ahead of the wheel axis, so the robot
       # is only in equilibrium leaning back far enough to bring it over them.
+      # -2.5 with the current battery: at -3 it ran away backwards, at -2
+      # forwards. The velocity loop takes up what's left.
       param(:setpoint,
         type: {:unit, :degree},
-        default: ~u(-3 degree),
+        default: ~u(-2.5 degree),
         min: ~u(-30 degree),
         max: ~u(30 degree),
         doc: "The lean the balance controller holds, negative leaning back"
       )
 
-      # Found on the robot rather than guessed, and paired with
-      # `derivative_gain` — what matters is the ratio. The sweeps behind both are
-      # in `mix help bb_nsk.add_balance`.
+      # 100 with `Goatbot.Balancer`: 150 and up shook (2-5 deg of fast
+      # oscillation), and every degree of shake is wheel speed not available for
+      # catching the robot. The stock controller's 180 was for the old battery.
       param(:proportional_gain,
         type: :float,
-        default: 180.0,
+        default: 100.0,
         min: 0.0,
         max: 250.0,
         doc: "Wheel velocity per radian of lean error, in 1/s"
       )
 
-      # A sharp optimum, not a plateau. Above 4.0 the derivative term amplifies
-      # gyro noise into the command and the wheels clip.
+      # 1.5 at a kp of 100. The stock note still stands: much above 4 the
+      # derivative term amplifies gyro noise into the command.
       param(:derivative_gain,
         type: :float,
-        default: 4.0,
+        default: 1.5,
         min: 0.0,
         max: 20.0,
         doc: "Wheel velocity per radian per second of lean rate"
       )
 
-      # More than a bias corrector: the commanded velocity is the only estimate
-      # of speed this hardware can produce, so this is the only velocity feedback
-      # in the system. Without it the robot rocks as it accelerates away.
-      # Only `Goatbot.Balancer` reads these two. Zero to start: tune PD first.
+      # Large, and doing the real work. The wheels behave like a speed servo
+      # (torque goes with command minus current speed), so holding the body at
+      # a lean takes a command that keeps growing while the lean persists. P and
+      # D alone can't: the robot ran away within seconds every time. In
+      # simulation the threshold was around 450; 400 balances on the robot.
       param(:integral_gain,
         type: :float,
-        default: 0.0,
+        default: 400.0,
         min: 0.0,
         max: 500.0,
         doc: "Wheel velocity per radian-second of accumulated lean error, in 1/s²"
       )
 
+      # Room for the integral to reach the motors' full speed (0.5 * 400 = 200
+      # rad/s, well past the ~31 they can do), so the clamp never binds in normal
+      # running and only stops a runaway winding it up without end.
       param(:integral_limit,
         type: :float,
-        default: 0.1,
+        default: 0.5,
         min: 0.0,
         max: 1.0,
         doc: "Clamp on the accumulated lean error, in radian-seconds"
       )
 
+      # Used by the stock `bb_nsk` balancer only. More than a bias corrector: the
+      # commanded velocity is the only estimate of speed this hardware can
+      # produce, so this is the only velocity feedback in the system. Without it
+      # the robot rocks as it accelerates away.
       param(:trim_gain,
         type: :float,
         default: 0.01,
@@ -390,6 +414,104 @@ defmodule Goatbot.Robot do
       )
     end
 
+    # `Goatbot.VelocityController`, which leans the robot against its own
+    # velocity. With a large `integral_gain` the wheel command tracks the wheel
+    # speed, so the filtered command *is* the velocity and `velocity_damping`
+    # does the work. That's Kv * r: 0.0043 is Kv 0.2 lean-radians per m/s.
+    group :velocity do
+      # Kv 0.2. Kv 0.3 (with a 0.1 s filter) braked harder in simulation, but
+      # on the robot it shook itself over within half a second of standing up:
+      # the filtered command is the balance loop's own output, so a stiffer,
+      # faster version of it feeds that output straight back in.
+      param(:velocity_damping,
+        type: :float,
+        default: 0.0043,
+        min: 0.0,
+        max: 0.02,
+        doc: "Radians of lean per rad/s of filtered wheel command"
+      )
+
+      # Off. Integrating the command was right for a balance loop without an
+      # integral, where the command meant acceleration; with one, it's double
+      # counting.
+      param(:velocity_gain,
+        type: :float,
+        default: 0.0,
+        min: 0.0,
+        max: 0.05,
+        doc: "Radians of lean per unit of integrated wheel command"
+      )
+
+      # 0.2. Shorter means less lag and less rolling back after braking in
+      # simulation, but 0.05 wobbled at ~5 Hz on the robot and 0.1 (with Kv 0.3)
+      # fell over at start-up.
+      param(:velocity_filter,
+        type: :float,
+        default: 0.2,
+        min: 0.1,
+        max: 10.0,
+        doc: "Seconds the wheel command is averaged over"
+      )
+
+      param(:velocity_limit,
+        type: {:unit, :degree},
+        default: ~u(5 degree),
+        min: ~u(0 degree),
+        max: ~u(15 degree),
+        doc: "Largest lean offset it may ask for"
+      )
+
+      # Driving: a held throttle sets a target speed the loop leans towards.
+      # 0.2 m/s at 0.2 m/s², which drove well on the robot. Simulation
+      # reckoned 0.3 at 0.5 m/s² would be fine; on the robot it wasn't, so
+      # treat the model as optimistic and step up from here with recordings.
+      param(:drive_speed,
+        type: :float,
+        default: 0.2,
+        min: 0.0,
+        max: 0.3,
+        doc: "Target speed, in m/s, at full throttle"
+      )
+
+      param(:drive_accel,
+        type: :float,
+        default: 0.2,
+        min: 0.05,
+        max: 1.0,
+        doc: "How fast, in m/s², the target speed may change"
+      )
+
+      # Letting go should stop it, not let it coast. Not too fast: the drop in
+      # target speed becomes a step in the lean target (about 3.4° from 0.3 m/s
+      # at 3 m/s²), which kicks the balance loop.
+      param(:drive_decel,
+        type: :float,
+        default: 1.0,
+        min: 0.1,
+        max: 10.0,
+        doc: "How fast, in m/s², the target speed may fall back towards zero"
+      )
+
+      # The dead-man: a driver who stops sending stops the robot.
+      param(:drive_timeout,
+        type: :integer,
+        default: 300,
+        min: 50,
+        max: 2000,
+        doc: "Milliseconds a drive message stays good for"
+      )
+
+      # Only gates `velocity_gain`'s integration, which is off. Left high so it
+      # doesn't hide the shove if that's ever turned back on.
+      param(:velocity_ceiling,
+        type: :float,
+        default: 50.0,
+        min: 0.1,
+        max: 50.0,
+        doc: "Average wheel command, in rad/s, above which it stops integrating"
+      )
+    end
+
     group :drive do
       # Parameter names are unique across *every* group, not just within one, so
       # these cannot be `:limit` and `:slew` — `:yaw` already has a `:limit`.
@@ -425,9 +547,14 @@ defmodule Goatbot.Robot do
       # Holds a heading, so a wheel finding more grip than the other doesn't
       # quietly turn the robot.
       #
-      # **Both signs are confirmed on hardware**, and separately: a loop with
-      # both inverted behaves exactly like one with both right, and no
-      # closed-loop test can tell them apart.
+      # The stock code said both signs were confirmed on hardware; on this
+      # robot the stock mixing spun it, and `Goatbot.Balancer` mixes the other
+      # way round. Confirmed live: a 13° error turned back to within 1° in a
+      # second at gain 4.
+      # 16, the stock value. Tested live: 8 held within ±1.6° with the calmest
+      # yaw rate (±8°/s); 16 holds within ±3.5° but twitchier (±12°/s, peaks of
+      # 50°/s), and once oscillated hard enough to be reverted. Lower it if the
+      # robot twists back and forth.
       param(:gain,
         type: :float,
         default: 16.0,
@@ -446,25 +573,47 @@ defmodule Goatbot.Robot do
       )
 
       # Velocity spent turning is velocity unavailable for staying upright, and
-      # straightening up is not worth falling over for.
+      # straightening up is not worth falling over for. 8, not the stock 3:
+      # turning at 2 rad/s takes 5.1 of differential by itself, and the
+      # balancer still cuts the differential back whenever it needs the headroom.
       param(:limit,
         type: :float,
-        default: 3.0,
+        default: 8.0,
         min: 0.0,
         max: 15.0,
         doc: "How much wheel velocity the heading may spend, in rad/s"
       )
 
       # No magnetometer, so the heading drifts and the held heading must follow
-      # it. The trade: a disturbance is corrected only to the extent it happens
-      # faster than this. Short is drift-tolerant and forgetful, long is patient
-      # and slowly turns.
+      # it. `Goatbot.YawController` learns the gyro's bias (-0.6°/s on this
+      # robot, 36°/min) while it isn't balancing and takes it out, so this only
+      # has to absorb what's left: long enough to hold a direction for minutes.
+      # The stock controller, without the calibration, needed 10.
       param(:tau,
         type: :float,
-        default: 10.0,
+        default: 60.0,
         min: 0.5,
         max: 120.0,
         doc: "Seconds for the held heading to follow the measured one"
+      )
+
+      # How fast ←/→ in the dashboard turns the robot: about 115°/s.
+      param(:turn_rate,
+        type: :float,
+        default: 2.0,
+        min: 0.1,
+        max: 4.0,
+        doc: "Turn rate, in rad/s, for a full turn request"
+      )
+
+      # track / (2 * wheel radius) = 0.11 m / 0.043 m: the wheel-speed
+      # difference a turn needs, so it doesn't have to wait for an error.
+      param(:feedforward,
+        type: :float,
+        default: 2.56,
+        min: 0.0,
+        max: 5.0,
+        doc: "Wheel rad/s of differential per rad/s of requested turn"
       )
     end
   end
@@ -481,6 +630,33 @@ defmodule Goatbot.Robot do
        fall_angle: param([:balance, :fall_angle])},
       # No hardware of its own (it only publishes to the wheels, which are
       # swapped for simulated ones), so it can run under SIMULATE too.
+      simulation: :start
+    )
+
+    controller(
+      :velocity_hold,
+      {Goatbot.VelocityController,
+       gain: param([:velocity, :velocity_gain]),
+       filter: param([:velocity, :velocity_filter]),
+       limit: param([:velocity, :velocity_limit]),
+       ceiling: param([:velocity, :velocity_ceiling]),
+       damping: param([:velocity, :velocity_damping]),
+       drive_speed: param([:velocity, :drive_speed]),
+       drive_accel: param([:velocity, :drive_accel]),
+       drive_decel: param([:velocity, :drive_decel]),
+       drive_timeout: param([:velocity, :drive_timeout])},
+      simulation: :start
+    )
+
+    controller(
+      :yaw_hold,
+      {Goatbot.YawController,
+       gain: param([:yaw, :gain]),
+       damping: param([:yaw, :damping]),
+       limit: param([:yaw, :limit]),
+       feedforward: param([:yaw, :feedforward]),
+       tau: param([:yaw, :tau]),
+       drive_timeout: param([:velocity, :drive_timeout])},
       simulation: :start
     )
 

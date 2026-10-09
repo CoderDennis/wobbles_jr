@@ -8,21 +8,25 @@ defmodule Goatbot.IExHelpers do
 
   @robot Goatbot.Robot
   @balancer :pid_balancer
+  @velocity :velocity_hold
   @gains [
     p: [:balance, :proportional_gain],
     i: [:balance, :integral_gain],
-    d: [:balance, :derivative_gain]
+    d: [:balance, :derivative_gain],
+    v: [:velocity, :velocity_damping]
   ]
 
   def goat do
     IO.puts("""
     Goatbot helpers
+      dash()                      full-screen dashboard (q to quit)
       status()                    state, lean, controller, gains
       go()                        arm and stand: hold it upright first
       arm() | stand() | disarm()
-      watch(hz \\\\ 10) | unwatch()  live lean, error, command, integral
-      gains()                     balance gains
-      gains(p: 100, i: 0, d: 1)   set any of p i d together
+      watch(hz \\\\ 10) | unwatch()  live lean, error, command, velocity estimate, offset
+      gains()                     balance gains and the velocity damping
+      gains(p: 100, i: 400, d: 1.5, v: 0.0043)
+                                  set any of p i d v together
       params(prefix \\\\ [])        every parameter, e.g. params([:balance])
       set(:name, value)           one parameter by name or path; plain numbers
                                   work for unit params (degrees, hertz, ...)
@@ -34,6 +38,9 @@ defmodule Goatbot.IExHelpers do
   end
 
   ## State
+
+  @doc "Opens the full-screen `Goatbot.Dashboard`; `q` hands the shell back."
+  def dash, do: Goatbot.Dashboard.run()
 
   def status do
     with :ok <- running() do
@@ -47,8 +54,21 @@ defmodule Goatbot.IExHelpers do
           IO.puts("balancer  not running")
 
         c ->
-          IO.puts("setpoint  #{deg(c.setpoint)}   error #{deg(error(lean, c))}")
+          IO.puts(
+            "setpoint  #{deg(c.setpoint)}   target #{deg(c.target)}   error #{deg(error(lean, c))}"
+          )
+
           IO.puts("command   #{num(c.last_command)} rad/s   integral #{num(c.integral, 7, 4)}")
+      end
+
+      case velocity() do
+        nil ->
+          IO.puts("velocity  controller not running")
+
+        v ->
+          IO.puts(
+            "velocity  #{num(v.velocity)}   average cmd #{num(v.average)} rad/s   offset #{deg(v.offset)}"
+          )
       end
 
       gains()
@@ -100,8 +120,10 @@ defmodule Goatbot.IExHelpers do
          %{} = c <- balancer() do
       lean = Map.get(BB.Robot.Runtime.configurations(@robot), :lean)
 
-      "lean #{deg(lean)}  error #{deg(error(lean, c))}" <>
-        "  cmd #{num(c.last_command, 7)}  I #{num(c.integral, 7, 4)}  #{c.mode}"
+      v = velocity() || %{velocity: nil, offset: nil}
+
+      "lean #{deg(lean)}  error #{deg(error(lean, c))}  cmd #{num(c.last_command, 7)}" <>
+        "  vel #{num(v.velocity)}  offset #{deg(v.offset)}  #{c.mode}"
     else
       _ -> "(robot or balancer not running)"
     end
@@ -277,8 +299,16 @@ defmodule Goatbot.IExHelpers do
     :exit, _ -> nil
   end
 
+  defp velocity do
+    BB.Process.call(@robot, @velocity, :inspect)
+  catch
+    :exit, _ -> nil
+  end
+
+  # Against the target the balancer is actually chasing, offset included.
   defp error(nil, _balancer), do: nil
-  defp error(lean, balancer), do: lean - balancer.setpoint
+  defp error(_lean, %{target: nil}), do: nil
+  defp error(lean, balancer), do: lean - balancer.target
 
   defp deg(nil), do: "     -  "
   defp deg(radians), do: num(radians * 180 / :math.pi(), 6, 2) <> "°"

@@ -6,11 +6,45 @@ defmodule Goatbot.Balancer do
   the lean in radians and the gyro's lean rate in rad/s), and drives both wheels
   at the same velocity:
 
-      command = kp * error + ki * ∫error dt + kd * rate,  error = lean - setpoint
+      target  = setpoint + offset
+      command = kp * error + ki * ∫error dt + kd * rate,  error = lean - target
 
   It only drives while the robot is `:balancing`. Arm the robot, hold it
   upright, then run `Goatbot.Robot.stand/0` to hand it over. If the lean error
   passes `fall_angle`, it brakes the wheels and runs `Goatbot.Robot.fall/0`.
+
+  ## Why the integral is large
+
+  The wheels behave like a speed servo: torque goes with the command minus the
+  speed they're already turning at. Holding the body at a lean means
+  accelerating, which means a command that keeps growing while the lean
+  persists, and only the integral does that. With P and D alone the robot ran
+  away within seconds on every attempt; with `ki` 400 it holds the lean it's
+  given, and the command tracks the wheel speed, which is what
+  `Goatbot.VelocityController` relies on.
+
+  The price is that a wrong setpoint means accelerating for as long as it's
+  held, so the velocity loop is not optional.
+
+  ## Turning
+
+  The latest `Goatbot.Message.Differential` on `[:yaw]`, from
+  `Goatbot.YawController`, is mixed in: left gets `command + differential`,
+  right `command - differential`, so a positive differential turns the robot
+  left.
+
+  That's the opposite of the stock `bb_nsk` mixing, whose comments say its signs
+  were confirmed on hardware. On this robot they weren't: with the stock mixing
+  the yaw loop asked for a right turn while the gyro showed it turning left at
+  88°/s, harder and harder. Either the actuators named left and right are on
+  the other sides, or one turn sense is reversed somewhere; this mixing is what
+  the robot actually does. Balance comes first, so the differential is
+  cut back to whatever headroom is left under `max_wheel_speed`, and one older
+  than `offset_timeout` counts as zero.
+
+  `offset` is the latest `Goatbot.Message.LeanOffset` on `[:lean_offset]`, sent
+  by `Goatbot.VelocityController`. One older than `offset_timeout` counts as
+  zero, so if that controller stops, this is a plain PID loop again.
   """
 
   use BB.Controller,
@@ -33,6 +67,16 @@ defmodule Goatbot.Balancer do
         required: true,
         doc: "Lean error past which it gives up"
       ],
+      max_wheel_speed: [
+        type: :float,
+        default: 31.4,
+        doc: "The motors' top speed, in rad/s: the most a wheel can be asked for"
+      ],
+      offset_timeout: [
+        type: :pos_integer,
+        default: 500,
+        doc: "Milliseconds a lean offset stays good for"
+      ],
       left_wheel: [type: :atom, default: :left_wheel],
       right_wheel: [type: :atom, default: :right_wheel]
     ]
@@ -41,6 +85,8 @@ defmodule Goatbot.Balancer do
   alias BB.Message.Sensor.JointState
   alias BB.Robot.Units
   alias BB.StateMachine.Transition
+  alias Goatbot.Message.Differential
+  alias Goatbot.Message.LeanOffset
 
   @impl BB.Controller
   def init(opts) do
@@ -54,12 +100,23 @@ defmodule Goatbot.Balancer do
     {:ok, _} = BB.PubSub.subscribe(robot, [:state_machine])
     {:ok, _} = BB.PubSub.subscribe(robot, lean_path, message_types: [JointState])
 
+    {:ok, _} =
+      BB.PubSub.subscribe(robot, Goatbot.VelocityController.path(), message_types: [LeanOffset])
+
+    {:ok, _} =
+      BB.PubSub.subscribe(robot, Goatbot.YawController.path(), message_types: [Differential])
+
     state = %{
       robot: robot,
       mode: BB.Robot.Runtime.state(robot),
       integral: 0.0,
       last: nil,
-      last_command: 0.0
+      last_command: 0.0,
+      offset: 0.0,
+      offset_at: nil,
+      differential: 0.0,
+      differential_at: nil,
+      target: nil
     }
 
     {:ok, configure(opts, state)}
@@ -75,8 +132,29 @@ defmodule Goatbot.Balancer do
 
   @impl BB.Controller
   def handle_info({:bb, [:state_machine], %Message{payload: %Transition{to: to}}}, state) do
-    # Start every attempt from a clean slate: no stale integral, no huge dt.
-    {:noreply, %{state | mode: to, integral: 0.0, last: nil, last_command: 0.0}}
+    # Start every attempt from a clean slate: no stale integral, no huge dt,
+    # no offset left over from last time.
+    {:noreply,
+     %{
+       state
+       | mode: to,
+         integral: 0.0,
+         last: nil,
+         last_command: 0.0,
+         offset: 0.0,
+         offset_at: nil,
+         differential: 0.0,
+         differential_at: nil,
+         target: nil
+     }}
+  end
+
+  def handle_info({:bb, _path, %Message{payload: %LeanOffset{offset: offset}} = msg}, state) do
+    {:noreply, %{state | offset: offset, offset_at: msg.monotonic_time}}
+  end
+
+  def handle_info({:bb, _path, %Message{payload: %Differential{differential: d}} = msg}, state) do
+    {:noreply, %{state | differential: d, differential_at: msg.monotonic_time}}
   end
 
   def handle_info(
@@ -89,7 +167,8 @@ defmodule Goatbot.Balancer do
   def handle_info(_message, state), do: {:noreply, state}
 
   defp step(state, lean, rate, now) do
-    error = lean - state.setpoint
+    target = state.setpoint + current_offset(state, now)
+    error = lean - target
 
     if abs(error) > state.fall_angle do
       fall(state)
@@ -106,12 +185,30 @@ defmodule Goatbot.Balancer do
       command = state.kp * error + state.ki * integral + state.kd * rate
 
       # Leaning forward is positive, and the fix is to drive forward under it,
-      # so both wheels take the command's sign as is.
-      BB.Actuator.set_velocity(state.robot, state.left_wheel, command)
-      BB.Actuator.set_velocity(state.robot, state.right_wheel, command)
+      # so both wheels take the command's sign; turning runs one faster than the
+      # other, with whatever headroom balancing leaves.
+      headroom = max(state.max_wheel_speed - abs(command), 0.0)
+      differential = current_differential(state, now) |> max(-headroom) |> min(headroom)
 
-      %{state | integral: integral, last: now, last_command: command}
+      BB.Actuator.set_velocity(state.robot, state.left_wheel, command + differential)
+      BB.Actuator.set_velocity(state.robot, state.right_wheel, command - differential)
+
+      %{state | integral: integral, last: now, last_command: command, target: target}
     end
+  end
+
+  defp current_differential(%{differential_at: nil}, _now), do: 0.0
+
+  defp current_differential(state, now) do
+    if now - state.differential_at <= state.offset_timeout * 1_000_000,
+      do: state.differential,
+      else: 0.0
+  end
+
+  defp current_offset(%{offset_at: nil}, _now), do: 0.0
+
+  defp current_offset(state, now) do
+    if now - state.offset_at <= state.offset_timeout * 1_000_000, do: state.offset, else: 0.0
   end
 
   defp fall(state) do
@@ -132,6 +229,8 @@ defmodule Goatbot.Balancer do
       kd: Keyword.fetch!(opts, :kd),
       integral_limit: Keyword.fetch!(opts, :integral_limit),
       fall_angle: Units.to_radians(Keyword.fetch!(opts, :fall_angle)),
+      offset_timeout: Keyword.fetch!(opts, :offset_timeout),
+      max_wheel_speed: Keyword.fetch!(opts, :max_wheel_speed),
       left_wheel: Keyword.fetch!(opts, :left_wheel),
       right_wheel: Keyword.fetch!(opts, :right_wheel)
     })

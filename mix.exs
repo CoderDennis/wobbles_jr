@@ -10,6 +10,7 @@ defmodule Goatbot.MixProject do
       app: @app,
       version: @version,
       elixir: "~> 1.20",
+      elixirc_paths: elixirc_paths(Mix.env()),
       archives: [nerves_bootstrap: "~> 1.17"],
       listeners: listeners(Mix.target(), Mix.env()),
       start_permanent: Mix.env() == :prod,
@@ -26,6 +27,10 @@ defmodule Goatbot.MixProject do
     ]
   end
 
+  # Test fakes (e.g. Goatbot.STM32.FakeUART) are compiled only for tests.
+  defp elixirc_paths(:test), do: ["lib", "test/support"]
+  defp elixirc_paths(_), do: ["lib"]
+
   def cli do
     [preferred_targets: [run: :host, test: :host]]
   end
@@ -36,6 +41,8 @@ defmodule Goatbot.MixProject do
       {:rustler, ">= 0.0.0", optional: true},
       {:circuits_i2c, "~> 2.1"},
       {:circuits_gpio, "~> 2.1"},
+      # The STM32 power-management coprocessor on ttyS2: battery and buttons.
+      {:circuits_uart, "~> 1.5"},
       {:nsk, github: "protolux-electronics/nsk", targets: :host, runtime: false},
       {:bb_nsk, "~> 0.1"},
       {:igniter, "~> 0.6", only: [:dev, :test]},
@@ -45,6 +52,7 @@ defmodule Goatbot.MixProject do
       {:logger_backends, "~> 1.0"},
       {:ring_logger, "~> 0.11.0"},
       {:toolshed, "~> 0.5.0"},
+      {:breeze, "~> 0.5.1"},
 
       # Allow Nerves.Runtime on host to support development, testing and CI.
       # See config/host.exs for usage.
