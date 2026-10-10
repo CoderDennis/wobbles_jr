@@ -72,6 +72,9 @@ defmodule WobblesJr.Leds do
   What each pixel should show for a battery, from `indicator-0` up: a list of
   `{colour, :solid | :breathe | :off}`, or `nil` when the battery isn't on USB
   and the state colours should show instead.
+
+  The bar fills from `indicator-3`, which is where it reads as filling from on
+  this robot.
   """
   @spec bar(BatteryState.t() | nil, keyword) :: [{Leds.colour(), :solid | :breathe | :off}] | nil
   def bar(%BatteryState{power_supply_status: status} = battery, opts)
@@ -88,11 +91,10 @@ defmodule WobblesJr.Leds do
     # Filling up: whole quarters are solid, and the one in progress breathes.
     lit = if done?, do: 4, else: trunc(fraction * 4)
 
-    for index <- 0..3 do
+    for index <- 0..3, place = 3 - index do
       cond do
-        index < lit -> {colour, :solid}
-        index == lit and status != :not_charging -> {colour, :breathe}
-        index == lit -> {colour, :solid}
+        place < lit -> {colour, :solid}
+        place == lit and status != :not_charging -> {colour, :breathe}
         true -> {@off, :off}
       end
     end
