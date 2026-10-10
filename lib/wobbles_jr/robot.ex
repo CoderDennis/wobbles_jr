@@ -734,7 +734,8 @@ defmodule WobblesJr.Robot do
     #    drive_release: param([:drive, :release])}
     # )
 
-    controller(:leds, {BB.NSK.Leds.Controller, brightness: 40})
+    # The stock state colours, plus a charge bar while disarmed on USB.
+    controller(:leds, {WobblesJr.Leds, brightness: 40})
     controller(:display, BB.NSK.Display.Controller)
   end
 
