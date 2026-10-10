@@ -660,6 +660,17 @@ defmodule WobblesJr.Robot do
         doc: "Wheel rad/s of differential per rad/s of requested turn"
       )
     end
+
+    group :led do
+      # 40, the stock value, was too bright everywhere it showed.
+      param(:brightness,
+        type: :integer,
+        default: 10,
+        min: 0,
+        max: 255,
+        doc: "Brightness at the top of a pulse, and of a lit bar pixel, out of 255"
+      )
+    end
   end
 
   controllers do
@@ -735,7 +746,7 @@ defmodule WobblesJr.Robot do
     # )
 
     # The stock state colours, plus a charge bar while disarmed on USB.
-    controller(:leds, {WobblesJr.Leds, brightness: 40})
+    controller(:leds, {WobblesJr.Leds, brightness: param([:led, :brightness])})
     controller(:display, BB.NSK.Display.Controller)
   end
 

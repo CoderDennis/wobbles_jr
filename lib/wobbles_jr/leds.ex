@@ -127,7 +127,8 @@ defmodule WobblesJr.Leds do
            operational: Runtime.state(robot),
            battery: nil,
            opts: opts,
-           brightness: opts |> Keyword.fetch!(:brightness) |> min(max),
+           max_brightness: max,
+           brightness: brightness(opts, max),
            started_at: System.monotonic_time(:millisecond)
          }}
     end
@@ -148,8 +149,10 @@ defmodule WobblesJr.Leds do
 
   @impl BB.Controller
   def handle_options(opts, state) do
-    {:ok, %{state | opts: opts, brightness: Keyword.fetch!(opts, :brightness)}}
+    {:ok, %{state | opts: opts, brightness: brightness(opts, state.max_brightness)}}
   end
+
+  defp brightness(opts, max), do: opts |> Keyword.fetch!(:brightness) |> min(max) |> max(0)
 
   @impl BB.Controller
   def terminate(_reason, _state) do
