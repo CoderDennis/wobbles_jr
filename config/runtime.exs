@@ -1,5 +1,8 @@
 import Config
 
+Application.ensure_all_started(:logger_backends)
+LoggerBackends.add(RingLogger)
+
 if System.get_env("PHX_SERVER") do
   config :wobbles_jr, WobblesJrWeb.Endpoint, server: true
 end

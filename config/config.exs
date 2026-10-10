@@ -44,6 +44,10 @@ config :emerge, compiled_backends: [], compiled_vulkan_backends: []
 config :bb_nsk, name: "wobbles_jr"
 config :bb_mcp, robots: [WobblesJr.Robot]
 
+# Breeze (the `WobblesJr.Dashboard` TUI) sizes its render cache from :os_mon when
+# it's running. It isn't here, so give it a fixed budget that suits the board.
+config :back_breeze, render_cache_max_memory_bytes: 16 * 1_024 * 1_024
+
 # Enable the Nerves integration with Mix
 Application.start(:nerves_bootstrap)
 
@@ -57,7 +61,7 @@ config :nerves, :firmware,
 # Set the SOURCE_DATE_EPOCH date for reproducible builds.
 # See https://reproducible-builds.org/docs/source-date-epoch/ for more information
 
-config :nerves, source_date_epoch: "1790686187"
+config :nerves, source_date_epoch: "1791461140"
 
 if Mix.target() == :host do
   import_config "host.exs"
