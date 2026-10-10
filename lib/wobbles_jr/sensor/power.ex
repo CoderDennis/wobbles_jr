@@ -107,7 +107,11 @@ defmodule WobblesJr.Sensor.Power do
   end
 
   @doc false
-  def battery_fields(%{v_batt_mv: mv, i_batt_ma: ma, usb_present: usb?, chrg_en: chrg?}) do
+  def battery_fields(%{v_batt_mv: mv, i_batt_ma: raw_ma, usb_present: usb?, chrg_en: chrg?}) do
+    # The STM32 counts current out of the battery as positive: on USB it read a
+    # steady -559 mA while the voltage climbed. Flip it so it's positive charging.
+    ma = -raw_ma
+
     [
       voltage: mv / 1000,
       current: ma / 1000,
