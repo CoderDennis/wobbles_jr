@@ -1,23 +1,23 @@
-defmodule Goatbot.Remote do
+defmodule WobblesJr.Remote do
   @moduledoc """
-  Drive commands from another Erlang node, such as the AtomVM badge's Goatbot
+  Drive commands from another Erlang node, such as the AtomVM badge's WobblesJr
   page.
 
-  Registered as `Goatbot.Remote`, so a peer sends to `{Goatbot.Remote, node}`
+  Registered as `WobblesJr.Remote`, so a peer sends to `{WobblesJr.Remote, node}`
   without needing a pid first:
 
-      send({Goatbot.Remote, :"goatbot@goatbot.local"}, {:drive, self(), throttle, turn})
+      send({WobblesJr.Remote, :"wobbles_jr@wobbles_jr.local"}, {:drive, self(), throttle, turn})
 
   `throttle` and `turn` are both fractions from -1 to 1: positive is forwards
   and to the robot's left. The throttle goes to `BB.NSK.Drive.command/3`
   as it is, and the turn is scaled by the `[:yaw, :turn_rate]` parameter, so
   the robot keeps its own limits. Each command is answered with
-  `{:goatbot, state}`, the robot's state machine state, which tells the
+  `{:wobbles_jr, state}`, the robot's state machine state, which tells the
   sender that the link is up. `{:hello, from}` gets the same answer without
   driving.
 
   `{:command, from, name}` runs `:arm`, `:stand` or `:disarm` on the robot,
-  as `Goatbot.IExHelpers` does, and answers `{:goatbot_command, name, text}`
+  as `WobblesJr.IExHelpers` does, and answers `{:wobbles_jr_command, name, text}`
   once it finishes: `"ok"`, or a short reason. It runs in its own process,
   so drive commands keep flowing while the robot arms.
 
@@ -30,7 +30,7 @@ defmodule Goatbot.Remote do
 
   require Logger
 
-  @robot Goatbot.Robot
+  @robot WobblesJr.Robot
   @commands [:arm, :stand, :disarm]
 
   # Reasons are clipped to fit the badge's panel.
@@ -61,7 +61,7 @@ defmodule Goatbot.Remote do
   def handle_info({:hello, from}, state) when is_pid(from), do: {:noreply, answer(from, state)}
 
   def handle_info({:command, from, name}, state) when is_pid(from) and name in @commands do
-    Task.start(fn -> send(from, {:goatbot_command, name, run(name)}) end)
+    Task.start(fn -> send(from, {:wobbles_jr_command, name, run(name)}) end)
     {:noreply, greet(node(from), state)}
   end
 
@@ -88,7 +88,7 @@ defmodule Goatbot.Remote do
   defp clip(text), do: binary_part(text, 0, @reason_bytes)
 
   defp answer(from, state) do
-    send(from, {:goatbot, safely(fn -> BB.Robot.Runtime.state(@robot) end) || :unknown})
+    send(from, {:wobbles_jr, safely(fn -> BB.Robot.Runtime.state(@robot) end) || :unknown})
     greet(node(from), state)
   end
 

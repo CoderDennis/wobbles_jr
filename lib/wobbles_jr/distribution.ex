@@ -1,10 +1,10 @@
-defmodule Goatbot.Distribution do
+defmodule WobblesJr.Distribution do
   @moduledoc """
-  Runs the robot's Erlang node as `goatbot@<wlan0 address>`, so the badge can
-  reach `Goatbot.Remote` by IP.
+  Runs the robot's Erlang node as `wobbles_jr@<wlan0 address>`, so the badge can
+  reach `WobblesJr.Remote` by IP.
 
   The node starts once wifi has an IPv4 address and is renamed if the address
-  changes. It is named for the address rather than for `goatbot.local`
+  changes. It is named for the address rather than for `wobbles_jr.local`
   because AtomVM checks the name it reaches against the one it asked for, and
   the badge can't resolve `.local` names yet: `mdns_lite` leaves the question
   out of legacy unicast answers, which lwIP's resolver discards.
@@ -17,7 +17,7 @@ defmodule Goatbot.Distribution do
   @compile {:no_warn_undefined, VintageNet}
 
   @ifname "wlan0"
-  @cookie :goatbot_cookie
+  @cookie :wobbles_jr_cookie
 
   def start_link(opts), do: GenServer.start_link(__MODULE__, opts, name: __MODULE__)
 
@@ -51,7 +51,7 @@ defmodule Goatbot.Distribution do
 
   defp apply_address(state, ip) do
     if Node.alive?(), do: Node.stop()
-    node = :"goatbot@#{ip}"
+    node = :"wobbles_jr@#{ip}"
 
     case Node.start(node, :longnames) do
       {:ok, _pid} ->

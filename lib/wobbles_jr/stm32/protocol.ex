@@ -1,4 +1,4 @@
-defmodule Goatbot.STM32.Protocol do
+defmodule WobblesJr.STM32.Protocol do
   @moduledoc """
   Pure encode/decode for the STM32 power-management wire protocol.
 

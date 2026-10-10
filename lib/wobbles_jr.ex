@@ -1,6 +1,6 @@
-defmodule Goatbot do
+defmodule WobblesJr do
   @moduledoc """
-  Documentation for `Goatbot`.
+  Documentation for `WobblesJr`.
   """
 
   @doc """
@@ -8,7 +8,7 @@ defmodule Goatbot do
 
   ## Examples
 
-      iex> Goatbot.hello()
+      iex> WobblesJr.hello()
       :world
 
   """

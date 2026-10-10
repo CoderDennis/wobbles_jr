@@ -1,8 +1,8 @@
-defmodule Goatbot.STM32Test do
+defmodule WobblesJr.STM32Test do
   use ExUnit.Case, async: true
 
-  alias Goatbot.STM32
-  alias Goatbot.STM32.FakeUART
+  alias WobblesJr.STM32
+  alias WobblesJr.STM32.FakeUART
 
   @port "ttyTEST"
 

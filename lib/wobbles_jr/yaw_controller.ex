@@ -1,10 +1,10 @@
-defmodule Goatbot.YawController do
+defmodule WobblesJr.YawController do
   @moduledoc """
   Holds the direction the robot is facing, and turns it on request.
 
   Runs its own loop at `rate` Hz and talks to the balancer only through PubSub:
   it reads the yaw rate from the `:heading` sensor and turn requests from
-  `[:drive]`, and publishes a `Goatbot.Message.Differential` on `[:yaw]` for
+  `[:drive]`, and publishes a `WobblesJr.Message.Differential` on `[:yaw]` for
   the balancer to mix into the two wheels.
 
   ## The law
@@ -15,7 +15,7 @@ defmodule Goatbot.YawController do
   robot that has been spun round several times turns back the short way rather
   than unwinding every revolution. Positive turns the robot left. This is the
   stock `bb_nsk` balancer's heading law and gains; the wheel mixing that makes
-  "positive" mean "left" is in `Goatbot.Balancer`, and differs from the stock
+  "positive" mean "left" is in `WobblesJr.Balancer`, and differs from the stock
   one.
 
   `feedforward` is what a turn needs before any error builds up: turning at
@@ -86,7 +86,7 @@ defmodule Goatbot.YawController do
   alias BB.Message.Sensor.JointState
   alias BB.NSK.Message.Drive
   alias BB.StateMachine.Transition
-  alias Goatbot.Message.Differential
+  alias WobblesJr.Message.Differential
 
   @path [:yaw]
 

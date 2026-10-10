@@ -1,7 +1,7 @@
-defmodule Goatbot.STM32.ProtocolTest do
+defmodule WobblesJr.STM32.ProtocolTest do
   use ExUnit.Case, async: true
 
-  alias Goatbot.STM32.Protocol
+  alias WobblesJr.STM32.Protocol
 
   # The expected wire strings mirror the firmware's own test suite in
   # nsk_stm32/protocol/src/lib.rs so this stays a faithful client.

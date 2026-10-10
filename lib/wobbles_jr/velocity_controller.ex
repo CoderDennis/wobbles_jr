@@ -1,11 +1,11 @@
-defmodule Goatbot.VelocityController do
+defmodule WobblesJr.VelocityController do
   @moduledoc """
   Leans the robot against its own velocity, so it slows to a stop instead of
   drifting away.
 
   Runs its own loop at `rate` Hz, separately from the balance loop, and talks to
   it only through PubSub: it listens to the wheel commands the balancer sends,
-  and publishes a `Goatbot.Message.LeanOffset` on `[:lean_offset]` for the
+  and publishes a `WobblesJr.Message.LeanOffset` on `[:lean_offset]` for the
   balancer to add to its setpoint.
 
   ## Where the velocity comes from
@@ -174,7 +174,7 @@ defmodule Goatbot.VelocityController do
   alias BB.NSK.Message.Drive
   alias BB.Robot.Units
   alias BB.StateMachine.Transition
-  alias Goatbot.Message.LeanOffset
+  alias WobblesJr.Message.LeanOffset
 
   @path [:lean_offset]
 

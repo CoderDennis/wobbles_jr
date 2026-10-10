@@ -1,7 +1,7 @@
-defmodule Goatbot.RemoteTest do
+defmodule WobblesJr.RemoteTest do
   use ExUnit.Case, async: true
 
-  alias Goatbot.Remote
+  alias WobblesJr.Remote
 
   describe "command/3" do
     test "passes the throttle through and scales the turn by the turn rate" do

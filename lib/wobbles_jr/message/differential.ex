@@ -1,9 +1,9 @@
-defmodule Goatbot.Message.Differential do
+defmodule WobblesJr.Message.Differential do
   @moduledoc """
   How hard to turn the robot, as a difference in wheel speed.
 
-  Published by `Goatbot.YawController` on `[:yaw]` and mixed in by
-  `Goatbot.Balancer`. Positive turns the robot to its left; see the balancer
+  Published by `WobblesJr.YawController` on `[:yaw]` and mixed in by
+  `WobblesJr.Balancer`. Positive turns the robot to its left; see the balancer
   for which wheel that speeds up on this robot.
   """
 

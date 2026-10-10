@@ -1,7 +1,7 @@
-defmodule Goatbot.MixProject do
+defmodule WobblesJr.MixProject do
   use Mix.Project
 
-  @app :goatbot
+  @app :wobbles_jr
   @version "0.1.0"
   @all_targets [:trellis]
 
@@ -23,11 +23,11 @@ defmodule Goatbot.MixProject do
   def application do
     [
       extra_applications: [:logger, :runtime_tools],
-      mod: {Goatbot.Application, []}
+      mod: {WobblesJr.Application, []}
     ]
   end
 
-  # Test fakes (e.g. Goatbot.STM32.FakeUART) are compiled only for tests.
+  # Test fakes (e.g. WobblesJr.STM32.FakeUART) are compiled only for tests.
   defp elixirc_paths(:test), do: ["lib", "test/support"]
   defp elixirc_paths(_), do: ["lib"]
 

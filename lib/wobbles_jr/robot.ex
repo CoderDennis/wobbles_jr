@@ -1,4 +1,4 @@
-defmodule Goatbot.Robot do
+defmodule WobblesJr.Robot do
   use BB, extensions: [BB.Parameter.Store.CubDB.Dsl]
 
   import BB.Unit
@@ -233,7 +233,7 @@ defmodule Goatbot.Robot do
     # Battery voltage and current from the STM32 coprocessor, published as
     # `BB.Message.Sensor.BatteryState` on [:sensor, :power], and its button
     # events on [:buttons]. Idle on the host, where there's no STM32.
-    sensor(:power, Goatbot.Sensor.Power)
+    sensor(:power, WobblesJr.Sensor.Power)
   end
 
   # `/root` is the Nerves application data partition and does not exist on a
@@ -245,8 +245,8 @@ defmodule Goatbot.Robot do
   parameter_store_cubdb do
     data_dir(
       if Mix.target() == :host,
-        do: "tmp/goatbot_params",
-        else: "/root/goatbot_params"
+        do: "tmp/wobbles_jr_params",
+        else: "/root/wobbles_jr_params"
     )
   end
 
@@ -321,7 +321,7 @@ defmodule Goatbot.Robot do
         doc: "The lean the balance controller holds, negative leaning back"
       )
 
-      # 100 with `Goatbot.Balancer`: 150 and up shook (2-5 deg of fast
+      # 100 with `WobblesJr.Balancer`: 150 and up shook (2-5 deg of fast
       # oscillation), and every degree of shake is wheel speed not available for
       # catching the robot. The stock controller's 180 was for the old battery.
       param(:proportional_gain,
@@ -415,7 +415,7 @@ defmodule Goatbot.Robot do
       )
     end
 
-    # `Goatbot.VelocityController`, which leans the robot against its own
+    # `WobblesJr.VelocityController`, which leans the robot against its own
     # velocity. With a large `integral_gain` the wheel command tracks the wheel
     # speed, so the filtered command *is* the velocity and `velocity_damping`
     # does the work. That's Kv * r: 0.0043 is Kv 0.2 lean-radians per m/s.
@@ -591,7 +591,7 @@ defmodule Goatbot.Robot do
       # quietly turn the robot.
       #
       # The stock code said both signs were confirmed on hardware; on this
-      # robot the stock mixing spun it, and `Goatbot.Balancer` mixes the other
+      # robot the stock mixing spun it, and `WobblesJr.Balancer` mixes the other
       # way round. Confirmed live: a 13° error turned back to within 1° in a
       # second at gain 4.
       # 16, the stock value. Tested live: 8 held within ±1.6° with the calmest
@@ -628,7 +628,7 @@ defmodule Goatbot.Robot do
       )
 
       # No magnetometer, so the heading drifts and the held heading must follow
-      # it. `Goatbot.YawController` learns the gyro's bias (-0.6°/s on this
+      # it. `WobblesJr.YawController` learns the gyro's bias (-0.6°/s on this
       # robot, 36°/min) while it isn't balancing and takes it out, so this only
       # has to absorb what's left: long enough to hold a direction for minutes.
       # The stock controller, without the calibration, needed 10.
@@ -664,7 +664,7 @@ defmodule Goatbot.Robot do
   controllers do
     controller(
       :pid_balancer,
-      {Goatbot.Balancer,
+      {WobblesJr.Balancer,
        setpoint: param([:balance, :setpoint]),
        kp: param([:balance, :proportional_gain]),
        ki: param([:balance, :integral_gain]),
@@ -678,7 +678,7 @@ defmodule Goatbot.Robot do
 
     controller(
       :velocity_hold,
-      {Goatbot.VelocityController,
+      {WobblesJr.VelocityController,
        gain: param([:velocity, :velocity_gain]),
        filter: param([:velocity, :velocity_filter]),
        limit: param([:velocity, :velocity_limit]),
@@ -697,7 +697,7 @@ defmodule Goatbot.Robot do
 
     controller(
       :yaw_hold,
-      {Goatbot.YawController,
+      {WobblesJr.YawController,
        gain: param([:yaw, :gain]),
        damping: param([:yaw, :damping]),
        limit: param([:yaw, :limit]),
@@ -707,11 +707,11 @@ defmodule Goatbot.Robot do
       simulation: :start
     )
 
-    # The stock balancer, swapped out for `Goatbot.Balancer` above. Only one of
+    # The stock balancer, swapped out for `WobblesJr.Balancer` above. Only one of
     # the two may run — both would be driving the same wheels.
     #
     # Without it, `arm` lands in `:idle` rather than `:balancing`, so hand over
-    # with `Goatbot.Robot.stand()`.
+    # with `WobblesJr.Robot.stand()`.
     #
     # controller(
     #   :balancer,

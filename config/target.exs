@@ -71,8 +71,8 @@ config :mdns_lite,
   # because otherwise any of the devices may respond to nerves.local leading to
   # unpredictable behavior.
 
-  # "goatbot" is for the badge to find the robot by, once it can resolve .local names.
-  hosts: [:hostname, "nerves", "goatbot"],
+  # "wobbles_jr" is for the badge to find the robot by, once it can resolve .local names.
+  hosts: [:hostname, "nerves", "wobbles_jr"],
   ttl: 120,
 
   # Advertise the following services over mDNS.

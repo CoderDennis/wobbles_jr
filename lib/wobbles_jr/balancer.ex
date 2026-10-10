@@ -1,4 +1,4 @@
-defmodule Goatbot.Balancer do
+defmodule WobblesJr.Balancer do
   @moduledoc """
   A minimal PID balance loop.
 
@@ -10,8 +10,8 @@ defmodule Goatbot.Balancer do
       command = kp * error + ki * ∫error dt + kd * rate,  error = lean - target
 
   It only drives while the robot is `:balancing`. Arm the robot, hold it
-  upright, then run `Goatbot.Robot.stand/0` to hand it over. If the lean error
-  passes `fall_angle`, it brakes the wheels and runs `Goatbot.Robot.fall/0`.
+  upright, then run `WobblesJr.Robot.stand/0` to hand it over. If the lean error
+  passes `fall_angle`, it brakes the wheels and runs `WobblesJr.Robot.fall/0`.
 
   ## Why the integral is large
 
@@ -21,15 +21,15 @@ defmodule Goatbot.Balancer do
   persists, and only the integral does that. With P and D alone the robot ran
   away within seconds on every attempt; with `ki` 400 it holds the lean it's
   given, and the command tracks the wheel speed, which is what
-  `Goatbot.VelocityController` relies on.
+  `WobblesJr.VelocityController` relies on.
 
   The price is that a wrong setpoint means accelerating for as long as it's
   held, so the velocity loop is not optional.
 
   ## Turning
 
-  The latest `Goatbot.Message.Differential` on `[:yaw]`, from
-  `Goatbot.YawController`, is mixed in: left gets `command + differential`,
+  The latest `WobblesJr.Message.Differential` on `[:yaw]`, from
+  `WobblesJr.YawController`, is mixed in: left gets `command + differential`,
   right `command - differential`, so a positive differential turns the robot
   left.
 
@@ -42,8 +42,8 @@ defmodule Goatbot.Balancer do
   cut back to whatever headroom is left under `max_wheel_speed`, and one older
   than `offset_timeout` counts as zero.
 
-  `offset` is the latest `Goatbot.Message.LeanOffset` on `[:lean_offset]`, sent
-  by `Goatbot.VelocityController`. One older than `offset_timeout` counts as
+  `offset` is the latest `WobblesJr.Message.LeanOffset` on `[:lean_offset]`, sent
+  by `WobblesJr.VelocityController`. One older than `offset_timeout` counts as
   zero, so if that controller stops, this is a plain PID loop again.
   """
 
@@ -85,8 +85,8 @@ defmodule Goatbot.Balancer do
   alias BB.Message.Sensor.JointState
   alias BB.Robot.Units
   alias BB.StateMachine.Transition
-  alias Goatbot.Message.Differential
-  alias Goatbot.Message.LeanOffset
+  alias WobblesJr.Message.Differential
+  alias WobblesJr.Message.LeanOffset
 
   @impl BB.Controller
   def init(opts) do
@@ -101,10 +101,10 @@ defmodule Goatbot.Balancer do
     {:ok, _} = BB.PubSub.subscribe(robot, lean_path, message_types: [JointState])
 
     {:ok, _} =
-      BB.PubSub.subscribe(robot, Goatbot.VelocityController.path(), message_types: [LeanOffset])
+      BB.PubSub.subscribe(robot, WobblesJr.VelocityController.path(), message_types: [LeanOffset])
 
     {:ok, _} =
-      BB.PubSub.subscribe(robot, Goatbot.YawController.path(), message_types: [Differential])
+      BB.PubSub.subscribe(robot, WobblesJr.YawController.path(), message_types: [Differential])
 
     state = %{
       robot: robot,
@@ -123,7 +123,7 @@ defmodule Goatbot.Balancer do
   end
 
   # Fired when a param([...]) referenced in the DSL changes, e.g.
-  # BB.Parameter.set(Goatbot.Robot, [:balance, :proportional_gain], 150.0)
+  # BB.Parameter.set(WobblesJr.Robot, [:balance, :proportional_gain], 150.0)
   @impl BB.Controller
   def handle_options(opts, state), do: {:ok, configure(opts, state)}
 

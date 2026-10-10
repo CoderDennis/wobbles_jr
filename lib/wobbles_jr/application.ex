@@ -1,4 +1,4 @@
-defmodule Goatbot.Application do
+defmodule WobblesJr.Application do
   # See https://elixir.hexdocs.pm/Application.html
   # for more information on OTP Applications
   @moduledoc false
@@ -12,15 +12,15 @@ defmodule Goatbot.Application do
       target_children() ++
         [
           # Children for all targets
-          # Starts a worker by calling: Goatbot.Worker.start_link(arg)
-          # {Goatbot.Worker, arg},
-          {Goatbot.Robot, robot_opts()},
-          Goatbot.Remote
+          # Starts a worker by calling: WobblesJr.Worker.start_link(arg)
+          # {WobblesJr.Worker, arg},
+          {WobblesJr.Robot, robot_opts()},
+          WobblesJr.Remote
         ]
 
     # See https://elixir.hexdocs.pm/Supervisor.html
     # for other strategies and supported options
-    opts = [strategy: :one_for_one, name: Goatbot.Supervisor]
+    opts = [strategy: :one_for_one, name: WobblesJr.Supervisor]
     Supervisor.start_link(children, opts)
   end
 
@@ -43,14 +43,14 @@ defmodule Goatbot.Application do
         # {Target.Worker, arg},
 
         # The STM32 power-management coprocessor on UART2: battery telemetry
-        # and the three buttons. `Goatbot.Sensor.Power` puts both on PubSub.
+        # and the three buttons. `WobblesJr.Sensor.Power` puts both on PubSub.
         %{
-          id: Goatbot.STM32,
+          id: WobblesJr.STM32,
           start: {__MODULE__, :start_stm32, [[port: "ttyS2"]]}
         },
 
         # The Erlang node the badge drives the robot through, named for the wifi address.
-        Goatbot.Distribution
+        WobblesJr.Distribution
       ]
     end
   end
@@ -61,7 +61,7 @@ defmodule Goatbot.Application do
   # Battery telemetry is a nice-to-have: if the UART won't open, log it and
   # carry on rather than failing the application and taking the robot with it.
   def start_stm32(opts) do
-    case Goatbot.STM32.start_link(opts) do
+    case WobblesJr.STM32.start_link(opts) do
       {:ok, pid} ->
         {:ok, pid}
 
@@ -75,7 +75,7 @@ defmodule Goatbot.Application do
     if System.get_env("SIMULATE") do
       [simulation: :kinematic]
     else
-      Application.get_env(:goatbot, Goatbot.Robot, [])
+      Application.get_env(:wobbles_jr, WobblesJr.Robot, [])
     end
   end
 end

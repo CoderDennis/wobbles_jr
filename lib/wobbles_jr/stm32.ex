@@ -1,4 +1,4 @@
-defmodule Goatbot.STM32 do
+defmodule WobblesJr.STM32 do
   @moduledoc """
   Driver for the STM32 power-management coprocessor on the Nerves Starter
   Kit, spoken over the serial link (UART2 / `ttyS2`) at 115200 8N1.
@@ -15,20 +15,20 @@ defmodule Goatbot.STM32 do
 
   ## Usage
 
-      iex> Goatbot.STM32.get_power()
+      iex> WobblesJr.STM32.get_power()
       {:ok, %{v_batt_mv: 3812, i_batt_ma: -142, usb_present: true, chrg_en: true}}
 
-      iex> Goatbot.STM32.set_rtc(System.os_time(:second))
+      iex> WobblesJr.STM32.set_rtc(System.os_time(:second))
       :ok
 
-  See `Goatbot.STM32.Protocol` for the wire format, and
+  See `WobblesJr.STM32.Protocol` for the wire format, and
   `nsk_stm32/protocol/src/lib.rs` for the firmware-side contract.
   """
 
   use GenServer
   require Logger
 
-  alias Goatbot.STM32.Protocol
+  alias WobblesJr.STM32.Protocol
 
   @default_port "ttyS2"
   @default_speed 115_200

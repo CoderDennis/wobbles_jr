@@ -1,6 +1,6 @@
-defmodule Goatbot.STM32.FakeUART do
+defmodule WobblesJr.STM32.FakeUART do
   @moduledoc """
-  In-memory stand-in for `Circuits.UART`, used to drive `Goatbot.STM32`
+  In-memory stand-in for `Circuits.UART`, used to drive `WobblesJr.STM32`
   in tests without real hardware.
 
   It implements only the small subset of the Circuits.UART API that the

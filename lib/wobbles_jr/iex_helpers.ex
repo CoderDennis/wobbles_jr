@@ -1,4 +1,4 @@
-defmodule Goatbot.IExHelpers do
+defmodule WobblesJr.IExHelpers do
   @moduledoc """
   Helpers for poking at the running robot from an IEx session.
 
@@ -6,7 +6,7 @@ defmodule Goatbot.IExHelpers do
   in. `goat/0` lists them.
   """
 
-  @robot Goatbot.Robot
+  @robot WobblesJr.Robot
   @balancer :pid_balancer
   @velocity :velocity_hold
   @gains [
@@ -18,7 +18,7 @@ defmodule Goatbot.IExHelpers do
 
   def goat do
     IO.puts("""
-    Goatbot helpers
+    WobblesJr helpers
       dash()                      full-screen dashboard (q to quit)
       status()                    state, lean, controller, gains
       go()                        arm and stand: hold it upright first
@@ -39,8 +39,8 @@ defmodule Goatbot.IExHelpers do
 
   ## State
 
-  @doc "Opens the full-screen `Goatbot.Dashboard`; `q` hands the shell back."
-  def dash, do: Goatbot.Dashboard.run()
+  @doc "Opens the full-screen `WobblesJr.Dashboard`; `q` hands the shell back."
+  def dash, do: WobblesJr.Dashboard.run()
 
   def status do
     with :ok <- running() do
@@ -86,12 +86,12 @@ defmodule Goatbot.IExHelpers do
         watch_loop(ref, div(1000, hz))
       end)
 
-    Process.register(pid, :goatbot_watch)
+    Process.register(pid, :wobbles_jr_watch)
     :ok
   end
 
   def unwatch do
-    case Process.whereis(:goatbot_watch) do
+    case Process.whereis(:wobbles_jr_watch) do
       nil ->
         :ok
 
@@ -273,8 +273,8 @@ defmodule Goatbot.IExHelpers do
     if running?() do
       {:ok, Process.whereis(@robot)}
     else
-      case Supervisor.start_child(Goatbot.Supervisor, {@robot, opts}) do
-        {:error, :already_present} -> Supervisor.restart_child(Goatbot.Supervisor, @robot)
+      case Supervisor.start_child(WobblesJr.Supervisor, {@robot, opts}) do
+        {:error, :already_present} -> Supervisor.restart_child(WobblesJr.Supervisor, @robot)
         other -> other
       end
     end
@@ -288,7 +288,7 @@ defmodule Goatbot.IExHelpers do
     if running?() do
       :ok
     else
-      IO.puts("Goatbot.Robot isn't running. start_robot() starts it.")
+      IO.puts("WobblesJr.Robot isn't running. start_robot() starts it.")
       {:error, :robot_not_running}
     end
   end

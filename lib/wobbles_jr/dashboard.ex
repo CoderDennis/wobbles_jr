@@ -1,9 +1,9 @@
-defmodule Goatbot.Dashboard do
+defmodule WobblesJr.Dashboard do
   @moduledoc """
   A terminal dashboard for the running robot, built with Breeze.
 
   Run it from an IEx session on the device (over SSH is fine) with
-  `Goatbot.Dashboard.run/0`, or `dash()` from the IEx helpers.
+  `WobblesJr.Dashboard.run/0`, or `dash()` from the IEx helpers.
 
   ## Keys
 
@@ -24,10 +24,10 @@ defmodule Goatbot.Dashboard do
   ## Driving
 
   Holding `↑` or `↓` sends a full throttle forward or back with
-  `BB.NSK.Drive.command/3`, every `@drive_ms`, and `Goatbot.VelocityController`
+  `BB.NSK.Drive.command/3`, every `@drive_ms`, and `WobblesJr.VelocityController`
   turns it into a target speed (`drive_speed`, ramped at `drive_accel`). The
   setpoint is never touched. Holding `←` or `→` sends a turn at the robot's
-  `[:yaw, :turn_rate]` instead, which `Goatbot.YawController` follows. One
+  `[:yaw, :turn_rate]` instead, which `WobblesJr.YawController` follows. One
   direction at a time: a terminal only repeats the last key pressed.
 
   A terminal reports key presses, not releases, so holding is inferred from auto
@@ -59,7 +59,7 @@ defmodule Goatbot.Dashboard do
   alias BB.Parameter.Changed
   alias BB.StateMachine.Transition
 
-  @robot Goatbot.Robot
+  @robot WobblesJr.Robot
   @refresh_ms 250
   @wheel_radius 0.0215
   @deg 180 / :math.pi()
@@ -176,7 +176,7 @@ defmodule Goatbot.Dashboard do
     ~H"""
     <box class="w-screen">
       <box class="inline w-full h-1 bg-panel overflow-hidden">
-        <box class="font-bold text-primary px-1">goatbot</box>
+        <box class="font-bold text-primary px-1">wobbles_jr</box>
         <box class={"font-bold px-1 text-#{state_color(@snapshot.state)}"}>
           {header_state(@snapshot)}
         </box>
@@ -404,7 +404,7 @@ defmodule Goatbot.Dashboard do
     do: "FALLEN · wheels braked · stand it up, hold it still, then s"
 
   defp banner(%{state: :error}),
-    do: "SAFETY ERROR · a disarm callback failed · BB.Safety.force_disarm(Goatbot.Robot) to clear"
+    do: "SAFETY ERROR · a disarm callback failed · BB.Safety.force_disarm(WobblesJr.Robot) to clear"
 
   defp banner(%{state: state}), do: to_string(state)
 

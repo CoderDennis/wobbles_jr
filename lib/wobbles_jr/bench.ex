@@ -1,12 +1,12 @@
-defmodule Goatbot.Bench do
+defmodule WobblesJr.Bench do
   @moduledoc """
   Benchmarks for comparing BEAM builds on the robot, such as the interpreter
   against the ARM32 JIT. Compiled into the firmware, so the measuring code is
   the same on both builds; an `ssh` eval script would be interpreted by
   `erl_eval`, which the JIT speeds up too.
 
-      Goatbot.Bench.run(label: "jit")       # everything, saved to /data/bench
-      Goatbot.Bench.compare("emu", "jit")   # side by side
+      WobblesJr.Bench.run(label: "jit")       # everything, saved to /data/bench
+      WobblesJr.Bench.compare("emu", "jit")   # side by side
 
   ## What it measures
 
@@ -52,7 +52,7 @@ defmodule Goatbot.Bench do
   alias BB.Message.Sensor.{Imu, JointState}
   alias BB.NSK.Sensor.Lean
 
-  @robot Goatbot.Robot
+  @robot WobblesJr.Robot
   @dir "/data/bench"
   @processes [:imu, :orientation, :lean_angle, :heading, :pid_balancer, :velocity_hold, :yaw_hold]
 
@@ -155,8 +155,8 @@ defmodule Goatbot.Bench do
       end,
       pubsub_publish: fn -> publish_and_drain(samples) end,
       velocity_tick:
-        tick_case(:velocity_hold, n, fn s -> Goatbot.VelocityController.tick(s, 0.02) end),
-      yaw_tick: tick_case(:yaw_hold, n, fn s -> Goatbot.YawController.tick(s, 0.5, 0.02) end),
+        tick_case(:velocity_hold, n, fn s -> WobblesJr.VelocityController.tick(s, 0.02) end),
+      yaw_tick: tick_case(:yaw_hold, n, fn s -> WobblesJr.YawController.tick(s, 0.5, 0.02) end),
       reference_float: fn ->
         Enum.reduce(samples, 0.0, fn {{gx, gy, gz}, _}, acc ->
           acc + :math.sin(gx) * :math.cos(gy) + :math.sqrt(abs(gz))
@@ -232,7 +232,7 @@ defmodule Goatbot.Bench do
   end
 
   defp dashboard_render(n) do
-    session = Breeze.Test.start!(Goatbot.Dashboard, size: {110, 36})
+    session = Breeze.Test.start!(WobblesJr.Dashboard, size: {110, 36})
 
     try do
       Breeze.Test.render!(session)
@@ -427,7 +427,7 @@ defmodule Goatbot.Bench do
   def with_scenario(:idle, fun), do: fun.()
 
   def with_scenario(:dashboard, fun) do
-    session = Breeze.Test.start!(Goatbot.Dashboard, size: {110, 36})
+    session = Breeze.Test.start!(WobblesJr.Dashboard, size: {110, 36})
     renderer = spawn_link(fn -> render_loop(session) end)
 
     try do
@@ -616,6 +616,6 @@ defmodule Goatbot.Bench do
   end
 
   defp dir do
-    if File.dir?("/data"), do: @dir, else: Path.join(System.tmp_dir!(), "goatbot_bench")
+    if File.dir?("/data"), do: @dir, else: Path.join(System.tmp_dir!(), "wobbles_jr_bench")
   end
 end

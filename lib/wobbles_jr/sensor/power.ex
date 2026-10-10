@@ -1,15 +1,15 @@
-defmodule Goatbot.Sensor.Power do
+defmodule WobblesJr.Sensor.Power do
   @moduledoc """
   The board's power and buttons, from the STM32 coprocessor, on the robot's
   PubSub.
 
-  Polls `Goatbot.STM32.get_power/0` every `interval` ms and publishes a
+  Polls `WobblesJr.STM32.get_power/0` every `interval` ms and publishes a
   `BB.Message.Sensor.BatteryState` on `[:sensor, :power]`: voltage and current
   in volts and amps (current negative while discharging), whether USB power is
   present, and a charging status. It also republishes the STM32's button events
-  as `Goatbot.Message.Button` on `[:buttons]`, for whatever wants to act on them.
+  as `WobblesJr.Message.Button` on `[:buttons]`, for whatever wants to act on them.
 
-  `Goatbot.STM32` owns the serial link and is started by the application, on the
+  `WobblesJr.STM32` owns the serial link and is started by the application, on the
   board only. This looks it up on every poll rather than requiring it at start,
   so start order doesn't matter, a restarted driver is picked up again, and on
   the host (no `ttyS2`) this simply publishes nothing.
@@ -24,13 +24,13 @@ defmodule Goatbot.Sensor.Power do
       ],
       stm32: [
         type: :atom,
-        default: Goatbot.STM32,
+        default: WobblesJr.STM32,
         doc: "The registered name of the STM32 driver"
       ]
     ]
 
   alias BB.Message.Sensor.BatteryState
-  alias Goatbot.Message.Button
+  alias WobblesJr.Message.Button
 
   require Logger
 
@@ -76,7 +76,7 @@ defmodule Goatbot.Sensor.Power do
         state
 
       pid ->
-        :ok = Goatbot.STM32.subscribe(state.stm32)
+        :ok = WobblesJr.STM32.subscribe(state.stm32)
         %{state | subscribed_to: pid}
     end
   catch
@@ -86,7 +86,7 @@ defmodule Goatbot.Sensor.Power do
   defp read(%{subscribed_to: nil} = state), do: state
 
   defp read(state) do
-    case Goatbot.STM32.get_power(state.stm32) do
+    case WobblesJr.STM32.get_power(state.stm32) do
       {:ok, power} ->
         {:ok, message} = BatteryState.new(:base_link, battery_fields(power))
         BB.PubSub.publish(state.robot, [:sensor | state.path], message)
