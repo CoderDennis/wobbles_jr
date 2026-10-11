@@ -312,11 +312,13 @@ defmodule WobblesJr.Robot do
     group :balance do
       # Not zero: the centre of mass sits ahead of the wheel axis, so the robot
       # is only in equilibrium leaning back far enough to bring it over them.
-      # -3.4 with the current battery, on carpet: -2.5 crawled. The velocity
-      # loop's trim learns whatever is left.
+      # -1.6 on Wobbles Jr, on wood: that is where it sat on average while
+      # balancing. At goatbot's -3.4 (and the old -2.4) it crept steadily, 45 cm
+      # in 8 s, because the velocity loop can only hold a lean that far from its
+      # balance point by moving. The velocity loop's trim learns whatever is left.
       param(:setpoint,
         type: {:unit, :degree},
-        default: ~u(-3.4 degree),
+        default: ~u(-1.6 degree),
         min: ~u(-30 degree),
         max: ~u(30 degree),
         doc: "The lean the balance controller holds, negative leaning back"
@@ -325,6 +327,7 @@ defmodule WobblesJr.Robot do
       # 100 with `WobblesJr.Balancer`: 150 and up shook (2-5 deg of fast
       # oscillation), and every degree of shake is wheel speed not available for
       # catching the robot. The stock controller's 180 was for the old battery.
+      # On Wobbles Jr 120 shook itself over after 12 s with nothing touching it.
       param(:proportional_gain,
         type: :float,
         default: 100.0,
@@ -335,7 +338,8 @@ defmodule WobblesJr.Robot do
 
       # 2.5 at a kp of 100: 1.5 held on tile but fell on carpet. The stock note
       # still stands: much above 4 the derivative term amplifies gyro noise into
-      # the command.
+      # the command. On Wobbles Jr 3.5 gave the steadiest run once and the
+      # shakiest the next time, at the same settings; 2.5 was consistent.
       param(:derivative_gain,
         type: :float,
         default: 2.5,
@@ -427,9 +431,13 @@ defmodule WobblesJr.Robot do
       # faster version of it feeds that output straight back in. With the 0.2 s
       # filter Kv 0.3 drove and stopped a little tighter, but the shake grew
       # slowly at rest and it fell over twice within a minute.
+      #
+      # 0.005 (Kv 0.23) on Wobbles Jr: at 0.0043 it wandered about ±15 cm every
+      # 8 s, at 0.005 mostly a few cm, with no more shake. Faster trim learning
+      # instead (`velocity_trim` 0.002, with kd 3.5) shook hard twice.
       param(:velocity_damping,
         type: :float,
-        default: 0.0043,
+        default: 0.005,
         min: 0.0,
         max: 0.02,
         doc: "Radians of lean per rad/s of filtered wheel command"
