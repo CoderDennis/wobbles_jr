@@ -30,3 +30,7 @@ To start your Nerves app:
   * Forum: https://elixirforum.com/c/nerves-forum
   * Elixir Discord #nerves channel: https://discord.gg/elixir
   * Source: https://github.com/nerves-project/nerves
+
+## License
+
+Licensed under the Apache License, Version 2.0. See [LICENSE](LICENSE).
