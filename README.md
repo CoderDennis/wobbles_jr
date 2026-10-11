@@ -1,6 +1,12 @@
 # WobblesJr
 
-**TODO: Add description**
+This is my code for the balance bot we built at the workshop led by James Harton at Goatmire 2026.
+
+I also copied over the balance controllers and other changes from https://github.com/gworkman/goatbot
+
+Changes I made include the following:
+- Adds a parameter for LED brightness because I found the default to be too bright.
+- Shows battery charge status on the LEDs while disarmed and on USB.
 
 ## Targets
 
