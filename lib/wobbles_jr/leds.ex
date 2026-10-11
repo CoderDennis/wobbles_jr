@@ -7,8 +7,11 @@ defmodule WobblesJr.Leds do
   except while the robot is disarmed on USB power. Then the pixels are a
   charge bar: one per quarter of the way from `empty` to `full` volts, solid
   green for each quarter done, the one being filled breathing, and all four
-  solid once the charger has finished. Amber instead of green when USB is
-  present but charging is switched off.
+  solid once it reaches `full`. Amber instead of green when USB is present but
+  charging is switched off.
+
+  Full is judged by voltage alone: the STM32's current reading doesn't follow
+  the charger, so there is no taper to watch for.
 
   The bar only ever replaces the disarmed colour, so anything that could move
   still shows as it always did.
@@ -20,7 +23,7 @@ defmodule WobblesJr.Leds do
     options_schema: [
       brightness: [
         type: :non_neg_integer,
-        default: 40,
+        default: 10,
         doc: "Brightness at the top of a pulse, and of a lit bar pixel"
       ],
       pulse_period: [
@@ -47,11 +50,6 @@ defmodule WobblesJr.Leds do
         type: :float,
         default: 4.2,
         doc: "Battery volts shown as a full bar"
-      ],
-      done_current: [
-        type: :float,
-        default: 0.05,
-        doc: "Charge current, in amps, below which a full battery counts as finished"
       ]
     ]
 
@@ -84,9 +82,7 @@ defmodule WobblesJr.Leds do
     full = Keyword.fetch!(opts, :full)
     fraction = ((battery.voltage - empty) / (full - empty)) |> max(0.0) |> min(1.0)
 
-    done? =
-      status == :full or
-        (fraction >= 1.0 and battery.current < Keyword.fetch!(opts, :done_current))
+    done? = status == :full or fraction >= 1.0
 
     # Filling up: whole quarters are solid, and the one in progress breathes.
     lit = if done?, do: 4, else: trunc(fraction * 4)

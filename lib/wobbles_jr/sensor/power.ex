@@ -5,8 +5,9 @@ defmodule WobblesJr.Sensor.Power do
 
   Polls `WobblesJr.STM32.get_power/0` every `interval` ms and publishes a
   `BB.Message.Sensor.BatteryState` on `[:sensor, :power]`: voltage and current
-  in volts and amps (current negative while discharging), whether USB power is
-  present, and a charging status. It also republishes the STM32's button events
+  in volts and amps (the current as the STM32 reports it, which stays negative
+  whether or not it's charging), whether USB power is present, and a charging
+  status from the STM32's USB and charge-enable flags. It also republishes the STM32's button events
   as `WobblesJr.Message.Button` on `[:buttons]`, for whatever wants to act on them.
 
   `WobblesJr.STM32` owns the serial link and is started by the application, on the
@@ -107,23 +108,19 @@ defmodule WobblesJr.Sensor.Power do
   end
 
   @doc false
-  def battery_fields(%{v_batt_mv: mv, i_batt_ma: raw_ma, usb_present: usb?, chrg_en: chrg?}) do
-    # The STM32 counts current out of the battery as positive: on USB it read a
-    # steady -559 mA while the voltage climbed. Flip it so it's positive charging.
-    ma = -raw_ma
-
+  def battery_fields(%{v_batt_mv: mv, i_batt_ma: ma, usb_present: usb?, chrg_en: chrg?}) do
     [
       voltage: mv / 1000,
       current: ma / 1000,
       present: true,
-      power_supply_status: status(ma, usb?, chrg?)
+      power_supply_status: status(usb?, chrg?)
     ]
   end
 
-  # Positive current into the battery while charging is enabled is charging;
-  # otherwise the sign says which way it's going.
-  defp status(ma, true, true) when ma > 0, do: :charging
-  defp status(_ma, true, false), do: :not_charging
-  defp status(ma, _usb?, _chrg?) when ma < 0, do: :discharging
-  defp status(_ma, _usb?, _chrg?), do: :unknown
+  # From the flags, not the current: on Wobbles Jr the STM32 read about -550 mA
+  # on battery and the same on USB while the voltage climbed, so its sign doesn't
+  # say which way the battery is going.
+  defp status(true, true), do: :charging
+  defp status(true, false), do: :not_charging
+  defp status(false, _chrg?), do: :discharging
 end
