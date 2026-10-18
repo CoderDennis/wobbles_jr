@@ -45,26 +45,10 @@ if keys == [],
 config :nerves_ssh,
   authorized_keys: Enum.map(keys, &File.read!/1)
 
-# The robot joins the WiFi network in config/wifi.secret.exs (gitignored, see
-# wifi.secret.exs.example) when that file exists. Without it wlan0 is left
-# unconfigured, and BB.NSK.Network.Monitor brings up the robot's own access
-# point instead. The access point is also the fallback if the network never
-# connects.
-wifi_secret = Path.join(__DIR__, "wifi.secret.exs")
-
-wlan0 =
-  if File.exists?(wifi_secret) do
-    {%{ssid: ssid, psk: psk}, _binding} = Code.eval_file(wifi_secret)
-
-    %{
-      type: VintageNetWiFi,
-      vintage_net_wifi: %{networks: [%{key_mgmt: :wpa_psk, ssid: ssid, psk: psk}]},
-      ipv4: %{method: :dhcp}
-    }
-  else
-    %{type: VintageNetWiFi}
-  end
-
+# wlan0 is left unconfigured, so BB.NSK.Network.Monitor brings up the robot's
+# own access point. Join it and use the setup page at the robot's address to
+# give it a network; VintageNet persists that, and it outlives `mix upload`.
+#
 # Configure the network using vintage_net
 #
 # Update regulatory_domain to your 2-letter country code E.g., "US"
@@ -79,7 +63,7 @@ config :vintage_net,
        type: VintageNetEthernet,
        ipv4: %{method: :dhcp}
      }},
-    {"wlan0", wlan0}
+    {"wlan0", %{type: VintageNetWiFi}}
   ]
 
 config :mdns_lite,
