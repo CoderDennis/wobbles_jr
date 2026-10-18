@@ -69,14 +69,12 @@ config :vintage_net,
 config :mdns_lite,
   # The `hosts` key specifies what hostnames mdns_lite advertises.  `:hostname`
   # advertises the device's hostname.local. For the official Nerves systems, this
-  # is "nerves-<4 digit serial#>.local".  The `"nerves"` host causes mdns_lite
-  # to advertise "nerves.local" for convenience. If more than one Nerves device
-  # is on the network, it is recommended to delete "nerves" from the list
-  # because otherwise any of the devices may respond to nerves.local leading to
-  # unpredictable behavior.
+  # is "nerves-<4 digit serial#>.local".  "nerves.local" is left out because
+  # other Nerves devices around would answer to it too.
 
-  # "wobbles_jr" is for the badge to find the robot by, once it can resolve .local names.
-  hosts: [:hostname, "nerves", "wobbles_jr"],
+  # "wobbles_jr" is how to reach the robot, from a laptop or the badge (once it
+  # can resolve .local names).
+  hosts: [:hostname, "wobbles_jr"],
   ttl: 120,
 
   # Advertise the following services over mDNS.
