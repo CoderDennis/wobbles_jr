@@ -285,13 +285,15 @@ defmodule WobblesJr.Robot do
       # plant the balance gains are tuned against — changing one invalidates the
       # tuning of the other.
       #
-      # 0.2 rather than 0.4, from replaying recorded IMU data through both
-      # filters: half as quick to mistake a steady acceleration for lean (0.9°
-      # of a 5° fake tilt after 1 s, against 1.65°), and the lowest error while
-      # being pushed back and forth. Madgwick was worse on both.
+      # 0.4 on Wobbles Jr. Replaying recorded IMU data favoured 0.2: half as
+      # quick to mistake a steady acceleration for lean (0.9° of a 5° fake tilt
+      # after 1 s, against 1.65°), and the lowest error while being pushed back
+      # and forth. Madgwick was worse on both. But on the robot, with the gains
+      # below tuned at 0.4, 0.2 (with ki 0.005) crawled steadily one way until
+      # it hit a wall.
       param(:kp,
         type: :float,
-        default: 0.2,
+        default: 0.4,
         min: 0.0,
         max: 5.0,
         doc:
@@ -299,10 +301,10 @@ defmodule WobblesJr.Robot do
       )
 
       # Defaults to zero in the library, so it has to be set. Matters more at a
-      # low kp, which leans on the gyro for longer.
+      # low kp, which leans on the gyro for longer. 0.01 goes with the 0.4 above.
       param(:ki,
         type: :float,
-        default: 0.005,
+        default: 0.01,
         min: 0.0,
         max: 0.5,
         doc: "Gyroscope bias estimation. Zero is proportional-only, which drifts"
@@ -435,9 +437,16 @@ defmodule WobblesJr.Robot do
       # 0.005 (Kv 0.23) on Wobbles Jr: at 0.0043 it wandered about ±15 cm every
       # 8 s, at 0.005 mostly a few cm, with no more shake. Faster trim learning
       # instead (`velocity_trim` 0.002, with kd 3.5) shook hard twice.
+      #
+      # 0.008 (Kv 0.37), stepped up from 0.005 on 2026-10-19: the wander's
+      # spread, from the wheel command, went 13.1 cm at 0.005, 9.6 at 0.006,
+      # 3.5 at 0.007 and about 2 at 0.008, over 40-90 s runs, with no more
+      # shake. 0.009 was barely better and kp * damping is getting close to the
+      # 1 where the loop feeds on itself, so 0.008 leaves a margin. The few
+      # larger moves left come with bursts of shake, not drift.
       param(:velocity_damping,
         type: :float,
-        default: 0.005,
+        default: 0.008,
         min: 0.0,
         max: 0.02,
         doc: "Radians of lean per rad/s of filtered wheel command"
@@ -527,8 +536,10 @@ defmodule WobblesJr.Robot do
       )
 
       # Learns the balance point from the crawl while standing still. 0.001
-      # trims out a crawl in about damping / 0.001 = 4 s. Only below the window
-      # (3 rad/s is 6.5 cm/s), so a shove isn't walked back.
+      # trims out a crawl in about damping / 0.001 = 8 s. Only below the window
+      # (3 rad/s is 6.5 cm/s), so a shove isn't walked back. 0.0015, to keep
+      # that near 5 s at a damping of 0.008, wandered no less and swung the
+      # trim further.
       param(:velocity_trim,
         type: :float,
         default: 0.001,
