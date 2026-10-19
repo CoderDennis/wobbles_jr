@@ -756,6 +756,9 @@ defmodule WobblesJr.Robot do
     # The stock state colours, plus a charge bar while disarmed on USB.
     controller(:leds, {WobblesJr.Leds, brightness: param([:led, :brightness])})
     controller(:display, BB.NSK.Display.Controller)
+
+    # Left: stand. Middle: disarm. Right, held: power off.
+    controller(:buttons, WobblesJr.Buttons)
   end
 
   states do
