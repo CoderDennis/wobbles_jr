@@ -330,9 +330,14 @@ defmodule WobblesJr.Robot do
       # oscillation), and every degree of shake is wheel speed not available for
       # catching the robot. The stock controller's 180 was for the old battery.
       # On Wobbles Jr 120 shook itself over after 12 s with nothing touching it.
+      #
+      # 80 on Wobbles Jr, from 60 s runs on 2026-10-19 at 3.6-3.7 V (lean sd,
+      # worst 10 s of it, wheel-command travel): 100 gave 1.64°/2.12°/29 cm, 90
+      # 1.42°/1.78°/21 cm, 80 1.40°/1.83°/11 cm, and 70 was too soft at
+      # 1.83°/2.32°/21 cm.
       param(:proportional_gain,
         type: :float,
-        default: 100.0,
+        default: 80.0,
         min: 0.0,
         max: 250.0,
         doc: "Wheel velocity per radian of lean error, in 1/s"
@@ -342,9 +347,13 @@ defmodule WobblesJr.Robot do
       # still stands: much above 4 the derivative term amplifies gyro noise into
       # the command. On Wobbles Jr 3.5 gave the steadiest run once and the
       # shakiest the next time, at the same settings; 2.5 was consistent.
+      #
+      # 2.0 at a kp of 80, in the same runs: 3.0 shook (2.16°, worst 2.62°) and
+      # travelled 52 cm, 1.5 gave 1.72°/1.82°/16 cm, and 2.0 1.38°/1.49°/10 cm,
+      # then 1.30°/1.62°/9 cm over 90 s. Short bursts of shake remain.
       param(:derivative_gain,
         type: :float,
-        default: 2.5,
+        default: 2.0,
         min: 0.0,
         max: 20.0,
         doc: "Wheel velocity per radian per second of lean rate"
@@ -441,8 +450,9 @@ defmodule WobblesJr.Robot do
       # 0.008 (Kv 0.37), stepped up from 0.005 on 2026-10-19: the wander's
       # spread, from the wheel command, went 13.1 cm at 0.005, 9.6 at 0.006,
       # 3.5 at 0.007 and about 2 at 0.008, over 40-90 s runs, with no more
-      # shake. 0.009 was barely better and kp * damping is getting close to the
-      # 1 where the loop feeds on itself, so 0.008 leaves a margin. The few
+      # shake. 0.009 was barely better and, at the kp of 100 it was tuned with,
+      # kp * damping was getting close to the 1 where the loop feeds on itself,
+      # so 0.008 leaves a margin. The few
       # larger moves left come with bursts of shake, not drift.
       param(:velocity_damping,
         type: :float,
