@@ -7,6 +7,20 @@ I also copied over the balance controllers and other changes from https://github
 Changes I made include the following:
 - Adds a parameter for LED brightness because I found the default to be too bright.
 - Shows battery charge status on the LEDs while disarmed and on USB.
+- Gives the board's three buttons actions (see below).
+
+## Buttons
+
+Seen from the front, left to right:
+
+| Button | Action |
+|---|---|
+| Left | **Stand.** Arms the robot first if it isn't armed. Hold it upright before pressing. |
+| Middle | **Disarm.** The motors cut out, so catch the robot. |
+| Right | **Power off**, after holding it for 2 seconds. Only works while disarmed. |
+
+The STM32 numbers the buttons right to left (1 is the right-hand button), so
+in the code the left button is 3. See `lib/wobbles_jr/buttons.ex`.
 
 ## Targets
 
