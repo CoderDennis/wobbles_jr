@@ -40,7 +40,6 @@ config :wobbles_jr,
        pubsub_server: WobblesJr.PubSub,
        live_view: [signing_salt: "PU6hgJnA"]
 
-config :emerge, compiled_backends: [], compiled_vulkan_backends: []
 config :bb_nsk, name: "wobbles_jr"
 config :bb_mcp, robots: [WobblesJr.Robot]
 

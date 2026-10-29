@@ -51,10 +51,14 @@ defmodule WobblesJr.MixProject do
       {:bandit, "~> 1.5"},
       {:phoenix, "~> 1.7"},
       {:vintage_net_wifi, "~> 0.12", targets: [:trellis]},
-      {:video_interop, "~> 0.1.1"},
-      {:emerge, "== 0.4.0-beta.1"},
+      {:video_interop, "~> 0.1.1", targets: @all_targets},
+      {:emerge, "== 0.4.0-beta.1", targets: @all_targets},
       {:eink,
-       [git: "https://github.com/emerge-elixir/eink.git", branch: "feat/imperative-gray2"]},
+       [
+         git: "https://github.com/emerge-elixir/eink.git",
+         branch: "feat/imperative-gray2",
+         targets: @all_targets
+       ]},
       {:hts221, [git: "https://harton.dev/james/hts221.git", branch: "main"]},
       {:circuits_i2c, "~> 2.1"},
       {:circuits_gpio, "~> 2.1"},
@@ -123,8 +127,6 @@ defmodule WobblesJr.MixProject do
   defp aliases() do
     [
       firmware: ["assets.deploy", "bb_nsk.prune_nifs", "firmware"],
-      test: ["bb_nsk.restore_nifs", "test"],
-      run: ["bb_nsk.restore_nifs", "run"],
       "assets.setup": ["esbuild.install --if-missing", "tailwind.install --if-missing"],
       "assets.build": ["compile", "esbuild wobbles_jr", "tailwind wobbles_jr"],
       "assets.deploy": [

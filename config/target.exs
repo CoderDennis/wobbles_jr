@@ -96,6 +96,8 @@ config :mdns_lite,
     }
   ]
 
+config :emerge, compiled_backends: [], compiled_vulkan_backends: []
+
 config :eink,
   driver: EInk.Driver.UC8276,
   width: 400,

@@ -16,7 +16,6 @@ defmodule WobblesJr.Application do
           # {WobblesJr.Worker, arg},
           WobblesJrWeb.Telemetry,
           BB.NSK.Network.Monitor,
-          BB.NSK.Display.Supervisor,
           {Phoenix.PubSub, [name: WobblesJr.PubSub]},
           {WobblesJr.Robot, robot_opts()},
           WobblesJr.Remote,
@@ -56,7 +55,11 @@ defmodule WobblesJr.Application do
         },
 
         # The Erlang node the badge drives the robot through, named for the wifi address.
-        WobblesJr.Distribution
+        WobblesJr.Distribution,
+
+        # The e-ink panel. Emerge, which renders it, is only a dependency on the
+        # board: it has no prebuilt NIF for the host.
+        BB.NSK.Display.Supervisor
       ]
     end
   end

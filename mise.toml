@@ -1,0 +1,4 @@
+[env]
+# sunxi's Makefile finds dtc through `brew --prefix` but then checks for
+# libfdt.h under an unset DTC_PREFIX, so the host build fails without this.
+DTC_PREFIX = "{{ exec(command='brew --prefix dtc') }}"
