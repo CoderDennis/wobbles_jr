@@ -776,7 +776,10 @@ defmodule WobblesJr.Robot do
 
     # The stock state colours, plus a charge bar while disarmed on USB.
     controller(:leds, {WobblesJr.Leds, brightness: param([:led, :brightness])})
-    controller(:display, BB.NSK.Display.Controller)
+
+    # A face on the e-paper panel while balancing or fallen, and bb_nsk's
+    # status screen otherwise. Runs without the panel too, drawing nowhere.
+    controller(:face, WobblesJr.Face)
 
     # Left: stand. Middle: disarm. Right, held: power off.
     controller(:buttons, WobblesJr.Buttons)
