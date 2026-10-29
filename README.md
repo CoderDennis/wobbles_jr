@@ -9,6 +9,10 @@ Changes I made include the following:
 - Shows battery charge status on the LEDs while disarmed and on USB.
 - Gives the board's three buttons actions (see below).
 
+From https://github.com/lawik/goatbot:
+- A face on the e-ink panel while balancing or fallen. Disarmed or idle, it keeps the status screen.
+- Explore mode, started with a double press of the left button.
+
 ## Buttons
 
 Seen from the front, left to right:
@@ -16,6 +20,7 @@ Seen from the front, left to right:
 | Button | Action |
 |---|---|
 | Left | **Stand.** Arms the robot first if it isn't armed. Hold it upright before pressing. |
+| Left, double press | **Explore on or off.** Wanders like an old robot vacuum: forward until it bumps into something, then backs off and turns. From idle, the first press stands it up and it starts exploring once it's balancing. A fall or disarm stops it. |
 | Middle | **Disarm.** The motors cut out, so catch the robot. |
 | Right | **Power off**, after holding it for 2 seconds. Only works while disarmed. |
 

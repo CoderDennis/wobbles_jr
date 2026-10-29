@@ -6,6 +6,9 @@ defmodule WobblesJr.Buttons do
 
   - **Left (3), press: stand.** Arms first if the robot isn't armed, like
     `WobblesJr.IExHelpers.go/0`, so one press gets it up. Hold it upright first.
+  - **Left (3), double press: explore on or off** (`WobblesJr.Explore`). The
+    first press still stands the robot at once, so a double press from idle
+    stands it up and sets it exploring as soon as it is balancing.
   - **Middle (2), press: disarm.** A stop that needs no phone or laptop.
   - **Right (1), hold: power off.** Only once it has been held for
     `:hold_time`, so a bump can't do it, and only while disarmed, because the
@@ -22,6 +25,11 @@ defmodule WobblesJr.Buttons do
         type: :pos_integer,
         default: 2_000,
         doc: "Milliseconds the power button has to be held"
+      ],
+      double_press: [
+        type: :pos_integer,
+        default: 400,
+        doc: "Milliseconds within which a second left press counts as a double press"
       ]
     ]
 
@@ -45,17 +53,37 @@ defmodule WobblesJr.Buttons do
   def on_press(@disarm), do: {:now, :disarm}
   def on_press(@power), do: {:hold, :poweroff}
 
+  @doc """
+  Whether a left press at `now` comes soon enough after the `previous` one, both
+  in milliseconds, to make a double press.
+  """
+  @spec double_press?(integer | nil, integer, pos_integer) :: boolean
+  def double_press?(nil, _now, _window), do: false
+  def double_press?(previous, now, window), do: now - previous <= window
+
   @impl BB.Controller
   def init(opts) do
     %{robot: robot} = Keyword.fetch!(opts, :bb)
     {:ok, _} = PubSub.subscribe(robot, Power.buttons_path())
 
-    {:ok, %{robot: robot, opts: opts, held: %{}}}
+    {:ok, %{robot: robot, opts: opts, held: %{}, left_at: nil}}
   end
 
   @impl BB.Controller
   def handle_info({:bb, _path, %Message{payload: %Button{button: button, pressed: true}}}, state) do
     case on_press(button) do
+      {:now, :stand} ->
+        now = System.monotonic_time(:millisecond)
+
+        # A third press starts over rather than making another double.
+        if double_press?(state.left_at, now, Keyword.fetch!(state.opts, :double_press)) do
+          run(state.robot, :explore)
+          {:noreply, %{state | left_at: nil}}
+        else
+          run(state.robot, :stand)
+          {:noreply, %{state | left_at: now}}
+        end
+
       {:now, name} ->
         run(state.robot, name)
         {:noreply, state}
@@ -96,6 +124,7 @@ defmodule WobblesJr.Buttons do
   end
 
   defp command(_robot, :stand), do: IExHelpers.go()
+  defp command(robot, :explore), do: WobblesJr.Explore.toggle(robot)
 
   defp command(robot, name) do
     with {:ok, pid} <- apply(robot, name, []), do: BB.Command.await(pid, 60_000)
